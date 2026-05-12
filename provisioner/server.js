@@ -13,6 +13,9 @@ if (!SECRET) {
 
 app.use(express.json());
 
+// ── Health (no auth needed) ───────────────────────────────────────────────────
+app.get('/health', (_, res) => res.json({ ok: true }));
+
 // ── Auth middleware ──────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   const auth = req.headers['authorization'] ?? '';
@@ -21,9 +24,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-// ── Health ───────────────────────────────────────────────────────────────────
-app.get('/health', (_, res) => res.json({ ok: true }));
 
 // ── Provision ────────────────────────────────────────────────────────────────
 app.post('/provision', async (req, res) => {

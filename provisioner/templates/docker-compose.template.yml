@@ -1,6 +1,7 @@
 services:
   app:
     image: {{APP_IMAGE}}
+    pull_policy: never
     restart: unless-stopped
     ports:
       - "127.0.0.1:{{PORT}}:3000"
@@ -11,9 +12,12 @@ services:
       DB_PORT: "3306"
       DB_NAME: "{{DB_NAME}}"
       DB_USER: "{{DB_USER}}"
-      DB_PASS: "{{DB_PASS}}"
-      SESSION_SECRET: "{{SESSION_SECRET}}"
-      ENCRYPTION_KEY: "{{ENCRYPTION_KEY}}"
+      DB_PASSWORD: "{{DB_PASS}}"
+      DB_ROOT_PASSWORD: "{{DB_ROOT_PASS}}"
+      AUTH_SECRET: "{{AUTH_SECRET}}"
+      SESSION_ENCRYPTION_KEY: "{{SESSION_ENCRYPTION_KEY}}"
+      TICKET_WEBHOOK_TOKEN: "{{TICKET_WEBHOOK_TOKEN}}"
+      COOKIE_SECURE: "1"
       ADMIN_EMAIL: "{{ADMIN_EMAIL}}"
       ADMIN_PASS: "{{ADMIN_PASS}}"
       # Tenant fills this in after first login via Settings → Integrations
@@ -25,7 +29,7 @@ services:
       - internal
 
   db:
-    image: mysql:8
+    image: mariadb:11.4
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: "{{DB_NAME}}"
@@ -35,7 +39,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p{{DB_ROOT_PASS}}"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p{{DB_ROOT_PASS}}"]
       interval: 5s
       timeout: 5s
       retries: 10

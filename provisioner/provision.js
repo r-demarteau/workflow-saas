@@ -49,11 +49,12 @@ async function provisionTenant({ slug, plan, email }) {
   const port          = nextPort();
   const dbName        = `nemo_${slug.replace(/-/g, '_')}`;
   const dbUser        = dbName;
-  const dbPass        = randomString(24);
-  const dbRootPass    = randomString(24);
-  const sessionSecret = randomString(32);
-  const encryptionKey = randomString(32);
-  const adminPassword = randomPassword();
+  const dbPass               = randomString(24);
+  const dbRootPass           = randomString(24);
+  const authSecret           = randomString(32);
+  const sessionEncryptionKey = randomString(32);
+  const ticketWebhookToken   = randomString(32);
+  const adminPassword        = randomPassword();
 
   // 1. Create tenant directory
   fs.mkdirSync(tenantDir, { recursive: true });
@@ -67,26 +68,21 @@ async function provisionTenant({ slug, plan, email }) {
     .replace(/\{\{PORT\}\}/g,           String(port))
     .replace(/\{\{DB_NAME\}\}/g,        dbName)
     .replace(/\{\{DB_USER\}\}/g,        dbUser)
-    .replace(/\{\{DB_PASS\}\}/g,        dbPass)
-    .replace(/\{\{DB_ROOT_PASS\}\}/g,   dbRootPass)
-    .replace(/\{\{SESSION_SECRET\}\}/g, sessionSecret)
-    .replace(/\{\{ENCRYPTION_KEY\}\}/g, encryptionKey)
-    .replace(/\{\{ADMIN_EMAIL\}\}/g,    email)
-    .replace(/\{\{ADMIN_PASS\}\}/g,     adminPassword)
-    .replace(/\{\{APP_IMAGE\}\}/g,      APP_IMAGE);
+    .replace(/\{\{DB_PASS\}\}/g,                 dbPass)
+    .replace(/\{\{DB_ROOT_PASS\}\}/g,            dbRootPass)
+    .replace(/\{\{AUTH_SECRET\}\}/g,             authSecret)
+    .replace(/\{\{SESSION_ENCRYPTION_KEY\}\}/g,  sessionEncryptionKey)
+    .replace(/\{\{TICKET_WEBHOOK_TOKEN\}\}/g,    ticketWebhookToken)
+    .replace(/\{\{ADMIN_EMAIL\}\}/g,             email)
+    .replace(/\{\{ADMIN_PASS\}\}/g,              adminPassword)
+    .replace(/\{\{APP_IMAGE\}\}/g,               APP_IMAGE);
 
   fs.writeFileSync(path.join(tenantDir, 'docker-compose.yml'), compose);
 
-  // 3. Start the stack
-  run('docker compose pull --quiet', tenantDir);
+  // 3. Start the stack (image is local — no pull needed)
   run('docker compose up -d', tenantDir);
 
-  // 4. Wait for DB to be ready then run migrations
-  console.log('  Waiting for database...');
-  execSync('sleep 10');
-  run('docker compose run --rm app node migrations/run.js', tenantDir);
-
-  // 5. Write nginx vhost
+  // 4. Write nginx vhost
   const nginxTemplate = fs.readFileSync(
     path.join(__dirname, 'templates', 'nginx.template.conf'), 'utf8'
   );

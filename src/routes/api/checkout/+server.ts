@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe } from '$lib/stripe';
+import { getStripe } from '$lib/stripe';
 import { env } from '$env/dynamic/private';
 import { env as pubEnv } from '$env/dynamic/public';
 
@@ -31,7 +31,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const baseUrl = pubEnv.PUBLIC_BASE_URL ?? 'http://localhost:5174';
 
-	const session = await stripe.checkout.sessions.create({
+	const session = await getStripe().checkout.sessions.create({
 		mode: 'subscription',
 		payment_method_types: ['card'],
 		customer_email: email,

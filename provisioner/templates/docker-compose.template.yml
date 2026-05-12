@@ -1,0 +1,50 @@
+services:
+  app:
+    image: {{APP_IMAGE}}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{PORT}}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: "{{DB_NAME}}"
+      DB_USER: "{{DB_USER}}"
+      DB_PASS: "{{DB_PASS}}"
+      SESSION_SECRET: "{{SESSION_SECRET}}"
+      ENCRYPTION_KEY: "{{ENCRYPTION_KEY}}"
+      ADMIN_EMAIL: "{{ADMIN_EMAIL}}"
+      ADMIN_PASS: "{{ADMIN_PASS}}"
+      # Tenant fills this in after first login via Settings → Integrations
+      WP_AUTH_URL: ""
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
+  db:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "{{DB_NAME}}"
+      MYSQL_USER: "{{DB_USER}}"
+      MYSQL_PASSWORD: "{{DB_PASS}}"
+      MYSQL_ROOT_PASSWORD: "{{DB_ROOT_PASS}}"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p{{DB_ROOT_PASS}}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+volumes:
+  db_data:
+
+networks:
+  internal:
+    driver: bridge

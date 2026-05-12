@@ -10,7 +10,7 @@ export function getStripe(): Stripe {
 			throw new Error('STRIPE_SECRET_KEY is not set');
 		}
 		_stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-			apiVersion: '2025-04-30.basil'
+			apiVersion: '2026-04-22.dahlia' as any
 		});
 	}
 	return _stripe;

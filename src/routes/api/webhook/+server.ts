@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { stripe } from '$lib/stripe';
-import { STRIPE_WEBHOOK_SECRET, PROVISION_API_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body      = await request.text();
@@ -9,7 +9,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	let event;
 	try {
-		event = stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET);
+		event = stripe.webhooks.constructEvent(body, signature, env.STRIPE_WEBHOOK_SECRET);
 	} catch {
 		throw error(400, 'Invalid webhook signature');
 	}
@@ -33,7 +33,7 @@ async function provisionTenant({
 	plan: string;
 	email: string;
 }) {
-	const provisionUrl = process.env.PROVISION_API_URL;
+	const provisionUrl = env.PROVISION_API_URL;
 	if (!provisionUrl) {
 		console.error('[webhook] PROVISION_API_URL not set — skipping provisioning');
 		return;
@@ -43,7 +43,7 @@ async function provisionTenant({
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${PROVISION_API_SECRET}`
+			'Authorization': `Bearer ${env.PROVISION_API_SECRET}`
 		},
 		body: JSON.stringify({ slug, plan, email })
 	});

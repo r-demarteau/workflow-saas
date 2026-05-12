@@ -1,18 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { stripe } from '$lib/stripe';
-import {
-	STRIPE_PRICE_STARTER,
-	STRIPE_PRICE_GROWTH,
-	STRIPE_PRICE_PRO
-} from '$env/static/private';
-import { PUBLIC_BASE_URL } from '$env/static/public';
-
-const PRICE_IDS: Record<string, string> = {
-	starter: STRIPE_PRICE_STARTER,
-	growth:  STRIPE_PRICE_GROWTH,
-	pro:     STRIPE_PRICE_PRO
-};
+import { env } from '$env/dynamic/private';
+import { env as pubEnv } from '$env/dynamic/public';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json().catch(() => null);
@@ -28,10 +18,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Invalid company name.' }, { status: 400 });
 	}
 
+	const PRICE_IDS: Record<string, string> = {
+		starter: env.STRIPE_PRICE_STARTER ?? '',
+		growth:  env.STRIPE_PRICE_GROWTH  ?? '',
+		pro:     env.STRIPE_PRICE_PRO     ?? ''
+	};
+
 	const priceId = PRICE_IDS[plan];
 	if (!priceId) {
 		return json({ error: 'Unknown plan.' }, { status: 400 });
 	}
+
+	const baseUrl = pubEnv.PUBLIC_BASE_URL ?? 'http://localhost:5174';
 
 	const session = await stripe.checkout.sessions.create({
 		mode: 'subscription',
@@ -43,8 +41,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			metadata: { slug, plan, email }
 		},
 		metadata: { slug, plan, email },
-		success_url: `${PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-		cancel_url:  `${PUBLIC_BASE_URL}/pricing`
+		success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+		cancel_url:  `${baseUrl}/pricing`
 	});
 
 	return json({ url: session.url });

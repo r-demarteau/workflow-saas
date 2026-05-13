@@ -25,12 +25,30 @@ function randomPassword(length = 16) {
 
 function nextPort() {
   fs.mkdirSync(TENANTS_DIR, { recursive: true });
-  let port = PORT_START;
-  if (fs.existsSync(PORT_FILE)) {
-    port = parseInt(fs.readFileSync(PORT_FILE, 'utf8').trim(), 10) + 1;
+  const lockFile = PORT_FILE + '.lock';
+  const deadline = Date.now() + 5000;
+
+  // Spin-lock using atomic exclusive file creation
+  while (true) {
+    try {
+      fs.writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
+      break;
+    } catch {
+      if (Date.now() > deadline) throw new Error('Could not acquire port lock after 5s');
+      execSync('sleep 0.05');
+    }
   }
-  fs.writeFileSync(PORT_FILE, String(port));
-  return port;
+
+  try {
+    let port = PORT_START;
+    if (fs.existsSync(PORT_FILE)) {
+      port = parseInt(fs.readFileSync(PORT_FILE, 'utf8').trim(), 10) + 1;
+    }
+    fs.writeFileSync(PORT_FILE, String(port));
+    return port;
+  } finally {
+    try { fs.unlinkSync(lockFile); } catch {}
+  }
 }
 
 function run(cmd, cwd) {
@@ -54,7 +72,7 @@ async function provisionTenant({ slug, plan, email }) {
   const authSecret           = randomString(32);
   const sessionEncryptionKey = randomString(32);
   const ticketWebhookToken   = randomString(32);
-  const adminPassword        = randomPassword();
+  const adminPassword        = randomPassword(16);
 
   // 1. Create tenant directory
   fs.mkdirSync(tenantDir, { recursive: true });
@@ -68,16 +86,25 @@ async function provisionTenant({ slug, plan, email }) {
     .replace(/\{\{PORT\}\}/g,           String(port))
     .replace(/\{\{DB_NAME\}\}/g,        dbName)
     .replace(/\{\{DB_USER\}\}/g,        dbUser)
-    .replace(/\{\{DB_PASS\}\}/g,                 dbPass)
-    .replace(/\{\{DB_ROOT_PASS\}\}/g,            dbRootPass)
-    .replace(/\{\{AUTH_SECRET\}\}/g,             authSecret)
-    .replace(/\{\{SESSION_ENCRYPTION_KEY\}\}/g,  sessionEncryptionKey)
-    .replace(/\{\{TICKET_WEBHOOK_TOKEN\}\}/g,    ticketWebhookToken)
     .replace(/\{\{ADMIN_EMAIL\}\}/g,             email)
-    .replace(/\{\{ADMIN_PASS\}\}/g,              adminPassword)
     .replace(/\{\{APP_IMAGE\}\}/g,               APP_IMAGE);
 
   fs.writeFileSync(path.join(tenantDir, 'docker-compose.yml'), compose);
+
+  // 2b. Write secrets to a separate file with restricted permissions
+  const secrets = [
+    `DB_PASSWORD=${dbPass}`,
+    `DB_ROOT_PASSWORD=${dbRootPass}`,
+    `MYSQL_PASSWORD=${dbPass}`,
+    `MYSQL_ROOT_PASSWORD=${dbRootPass}`,
+    `AUTH_SECRET=${authSecret}`,
+    `SESSION_ENCRYPTION_KEY=${sessionEncryptionKey}`,
+    `TICKET_WEBHOOK_TOKEN=${ticketWebhookToken}`,
+    `ADMIN_PASS=${adminPassword}`,
+  ].join('\n') + '\n';
+
+  const secretsFile = path.join(tenantDir, '.env.secrets');
+  fs.writeFileSync(secretsFile, secrets, { mode: 0o600 });
 
   // 3. Start the stack (image is local — no pull needed)
   run('docker compose up -d', tenantDir);

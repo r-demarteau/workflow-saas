@@ -3,6 +3,7 @@ services:
     image: {{APP_IMAGE}}
     pull_policy: never
     restart: unless-stopped
+    env_file: .env.secrets
     ports:
       - "127.0.0.1:{{PORT}}:3000"
     environment:
@@ -12,16 +13,14 @@ services:
       DB_PORT: "3306"
       DB_NAME: "{{DB_NAME}}"
       DB_USER: "{{DB_USER}}"
-      DB_PASSWORD: "{{DB_PASS}}"
-      DB_ROOT_PASSWORD: "{{DB_ROOT_PASS}}"
-      AUTH_SECRET: "{{AUTH_SECRET}}"
-      SESSION_ENCRYPTION_KEY: "{{SESSION_ENCRYPTION_KEY}}"
-      TICKET_WEBHOOK_TOKEN: "{{TICKET_WEBHOOK_TOKEN}}"
       COOKIE_SECURE: "1"
       ADMIN_EMAIL: "{{ADMIN_EMAIL}}"
-      ADMIN_PASS: "{{ADMIN_PASS}}"
-      # Tenant fills this in after first login via Settings → Integrations
       WP_AUTH_URL: ""
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
     depends_on:
       db:
         condition: service_healthy
@@ -31,15 +30,19 @@ services:
   db:
     image: mariadb:11.4
     restart: unless-stopped
+    env_file: .env.secrets
     environment:
       MYSQL_DATABASE: "{{DB_NAME}}"
       MYSQL_USER: "{{DB_USER}}"
-      MYSQL_PASSWORD: "{{DB_PASS}}"
-      MYSQL_ROOT_PASSWORD: "{{DB_ROOT_PASS}}"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p{{DB_ROOT_PASS}}"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
       retries: 10

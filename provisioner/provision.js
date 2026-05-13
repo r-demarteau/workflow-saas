@@ -72,7 +72,8 @@ async function provisionTenant({ slug, plan, email }) {
   const authSecret           = randomString(32);
   const sessionEncryptionKey = randomString(32);
   const ticketWebhookToken   = randomString(32);
-  const adminPassword        = randomPassword(16);
+  const setupToken           = randomString(32);
+  const setupTokenExp        = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60; // 14 days
 
   // 1. Create tenant directory
   fs.mkdirSync(tenantDir, { recursive: true });
@@ -100,7 +101,6 @@ async function provisionTenant({ slug, plan, email }) {
     `AUTH_SECRET=${authSecret}`,
     `SESSION_ENCRYPTION_KEY=${sessionEncryptionKey}`,
     `TICKET_WEBHOOK_TOKEN=${ticketWebhookToken}`,
-    `ADMIN_PASS=${adminPassword}`,
   ].join('\n') + '\n';
 
   const secretsFile = path.join(tenantDir, '.env.secrets');
@@ -108,6 +108,34 @@ async function provisionTenant({ slug, plan, email }) {
 
   // 3. Start the stack (image is local — no pull needed)
   run('docker compose up -d', tenantDir);
+
+  // 3b. Wait for DB to be healthy, then seed magic token + admin email
+  // Retry up to 30 × 2 s = 60 s total
+  const dbContainer = `${slug}-db-1`;
+  const sql = [
+    `INSERT INTO settings (id, setup_complete, magic_token, magic_token_exp, admin_email)`,
+    `VALUES (1, 0, '${setupToken}', ${setupTokenExp}, '${email}')`,
+    `ON DUPLICATE KEY UPDATE`,
+    `  magic_token='${setupToken}',`,
+    `  magic_token_exp=${setupTokenExp},`,
+    `  admin_email='${email}';`,
+  ].join(' ');
+
+  let seeded = false;
+  for (let attempt = 1; attempt <= 30; attempt++) {
+    try {
+      run(
+        `docker exec ${dbContainer} mariadb -u root -p${dbRootPass} ${dbName} -e "${sql}"`,
+        '/'
+      );
+      seeded = true;
+      break;
+    } catch {
+      if (attempt === 30) throw new Error(`DB never became ready for tenant ${slug}`);
+      execSync('sleep 2');
+    }
+  }
+  console.log(`  [provision] magic token seeded (seeded=${seeded})`);
 
   // 4. Write nginx vhost
   const nginxTemplate = fs.readFileSync(
@@ -132,7 +160,7 @@ async function provisionTenant({ slug, plan, email }) {
   // Wildcard cert covers *.nemofirm.com automatically.
 
   // 8. Send welcome email
-  await sendWelcomeEmail({ email, slug, domain: DOMAIN, adminPassword });
+  await sendWelcomeEmail({ email, slug, domain: DOMAIN, setupToken });
 
   return { port };
 }

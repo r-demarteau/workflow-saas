@@ -28,9 +28,12 @@ for tenant_dir in "$TENANTS_DIR"/*/; do
     continue
   fi
 
-  # Load secrets
-  # shellcheck disable=SC1090
-  source <(grep -E '^MYSQL_ROOT_PASSWORD' "$secrets_file")
+  # Extract root password directly — safer than source in a loop
+  MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD' "$secrets_file" | cut -d= -f2 | tr -d '[:space:]')
+  if [[ -z "$MYSQL_ROOT_PASSWORD" ]]; then
+    echo "[backup] Skipping $slug — could not read MYSQL_ROOT_PASSWORD"
+    continue
+  fi
   # DB name is always nemo_{slug} with hyphens replaced by underscores — same as provision.js
   db_name="nemo_${slug//-/_}"
 
@@ -45,7 +48,7 @@ for tenant_dir in "$TENANTS_DIR"/*/; do
   echo "[backup] Dumping $slug ($db_name) → $out"
 
   docker exec "$container" \
-    mariadb-dump -u root -p"${MYSQL_ROOT_PASSWORD}" --single-transaction "$db_name" \
+    mariadb-dump -u root -p"${MYSQL_ROOT_PASSWORD}" --single-transaction --no-tablespaces "$db_name" \
     | gzip > "$out"
 
   echo "[backup] ✓ $slug"

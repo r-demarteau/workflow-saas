@@ -18,7 +18,19 @@ export const POST: RequestHandler = async ({ request }) => {
 		const session  = event.data.object;
 		const { slug, plan, email } = session.metadata as Record<string, string>;
 
-		await provisionTenant({ slug, plan, email });
+		try {
+			await provisionTenant({ slug, plan, email });
+		} catch (err) {
+			const msg = String((err as Error).message ?? err);
+			if (msg.includes('already exists')) {
+				// Stripe retried a webhook we already processed — safe to ignore.
+				console.log(`[webhook] Tenant ${slug} already provisioned — skipping duplicate event`);
+			} else {
+				// Real failure: log loudly but still return 200 so Stripe stops retrying.
+				// The provisioner logs are the source of truth for manual follow-up.
+				console.error(`[webhook] Provisioning failed for ${slug}:`, err);
+			}
+		}
 	}
 
 	return json({ received: true });
@@ -50,8 +62,9 @@ async function provisionTenant({
 
 	if (!res.ok) {
 		const text = await res.text();
-		console.error(`[webhook] Provisioning failed for ${slug}: ${res.status} ${text}`);
-	} else {
-		console.log(`[webhook] Tenant provisioned: ${slug}.nemofirm.com (${plan})`);
+		// Surface the provisioner's error message so the caller can inspect it.
+		throw new Error(`Provisioner returned ${res.status}: ${text}`);
 	}
+
+	console.log(`[webhook] Tenant provisioned: ${slug}.nemofirm.com (${plan})`);
 }

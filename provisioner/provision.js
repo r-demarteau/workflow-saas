@@ -1,7 +1,8 @@
 const fs   = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const crypto = require('crypto');
+const mysql = require('mysql2');
+const { randomString, randomPassword, hashToken } = require('./utils');
 const { sendWelcomeEmail } = require('./email');
 
 const TENANTS_DIR  = process.env.TENANTS_DIR  || '/opt/nemofirm/tenants';
@@ -12,23 +13,12 @@ const DOMAIN       = process.env.DOMAIN        || 'nemofirm.com';
 const APP_IMAGE    = process.env.APP_IMAGE      || 'ghcr.io/nemofirm/woo-client:latest';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function randomString(bytes = 32) {
-  return crypto.randomBytes(bytes).toString('hex');
-}
-
-function randomPassword(length = 16) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
-  return Array.from(crypto.randomBytes(length))
-    .map(b => chars[b % chars.length])
-    .join('');
-}
 
 function nextPort() {
   fs.mkdirSync(TENANTS_DIR, { recursive: true });
   const lockFile = PORT_FILE + '.lock';
   const deadline = Date.now() + 5000;
 
-  // Spin-lock using atomic exclusive file creation
   while (true) {
     try {
       fs.writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
@@ -56,7 +46,17 @@ function run(cmd, cwd) {
   execSync(cmd, { cwd, stdio: 'inherit' });
 }
 
+// Runs a command with SQL piped via stdin — keeps SQL out of the process list.
+function runSql(dbContainer, dbName, sql) {
+  console.log(`  $ docker exec -i ${dbContainer} mariadb [sql via stdin]`);
+  // $MYSQL_ROOT_PASSWORD is already set in the container's environment (.env.secrets).
+  // Using it here means the password never appears in the host process list.
+  const cmd = `docker exec -i ${dbContainer} sh -c 'mariadb -u root -p"$MYSQL_ROOT_PASSWORD" "${dbName}"'`;
+  execSync(cmd, { input: sql + '\n', encoding: 'utf8', stdio: ['pipe', 'inherit', 'inherit'] });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
+
 async function provisionTenant({ slug, plan, email }) {
   const tenantDir = path.join(TENANTS_DIR, slug);
 
@@ -72,8 +72,9 @@ async function provisionTenant({ slug, plan, email }) {
   const authSecret           = randomString(32);
   const sessionEncryptionKey = randomString(32);
   const ticketWebhookToken   = randomString(32);
-  const setupToken           = randomString(32);
-  const setupTokenExp        = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60; // 14 days
+  const setupToken           = randomString(32);           // raw — goes in email URL
+  const setupTokenHash       = hashToken(setupToken);      // stored in DB
+  const setupTokenExp        = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
 
   // 1. Create tenant directory
   fs.mkdirSync(tenantDir, { recursive: true });
@@ -87,12 +88,12 @@ async function provisionTenant({ slug, plan, email }) {
     .replace(/\{\{PORT\}\}/g,           String(port))
     .replace(/\{\{DB_NAME\}\}/g,        dbName)
     .replace(/\{\{DB_USER\}\}/g,        dbUser)
-    .replace(/\{\{ADMIN_EMAIL\}\}/g,             email)
-    .replace(/\{\{APP_IMAGE\}\}/g,               APP_IMAGE);
+    .replace(/\{\{ADMIN_EMAIL\}\}/g,    email)
+    .replace(/\{\{APP_IMAGE\}\}/g,      APP_IMAGE);
 
   fs.writeFileSync(path.join(tenantDir, 'docker-compose.yml'), compose);
 
-  // 2b. Write secrets to a separate file with restricted permissions
+  // 2b. Write secrets with restricted permissions
   const secrets = [
     `DB_PASSWORD=${dbPass}`,
     `DB_ROOT_PASSWORD=${dbRootPass}`,
@@ -103,31 +104,29 @@ async function provisionTenant({ slug, plan, email }) {
     `TICKET_WEBHOOK_TOKEN=${ticketWebhookToken}`,
   ].join('\n') + '\n';
 
-  const secretsFile = path.join(tenantDir, '.env.secrets');
-  fs.writeFileSync(secretsFile, secrets, { mode: 0o600 });
+  fs.writeFileSync(path.join(tenantDir, '.env.secrets'), secrets, { mode: 0o600 });
 
-  // 3. Start the stack (image is local — no pull needed)
+  // 3. Start the stack
   run('docker compose up -d', tenantDir);
 
-  // 3b. Wait for DB to be healthy, then seed magic token + admin email
-  // Retry up to 30 × 2 s = 60 s total
+  // 3b. Wait for DB to be healthy, then seed the hashed magic token + admin email.
+  // The password never appears in the host process list — it comes from the
+  // container's own MYSQL_ROOT_PASSWORD env var, and SQL is piped via stdin.
   const dbContainer = `${slug}-db-1`;
+
   const sql = [
     `INSERT INTO settings (id, setup_complete, magic_token, magic_token_exp, admin_email)`,
-    `VALUES (1, 0, '${setupToken}', ${setupTokenExp}, '${email}')`,
+    `VALUES (1, 0, ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)})`,
     `ON DUPLICATE KEY UPDATE`,
-    `  magic_token='${setupToken}',`,
+    `  magic_token=${mysql.escape(setupTokenHash)},`,
     `  magic_token_exp=${setupTokenExp},`,
-    `  admin_email='${email}';`,
+    `  admin_email=${mysql.escape(email)};`,
   ].join(' ');
 
   let seeded = false;
   for (let attempt = 1; attempt <= 30; attempt++) {
     try {
-      run(
-        `docker exec ${dbContainer} mariadb -u root -p${dbRootPass} ${dbName} -e "${sql}"`,
-        '/'
-      );
+      runSql(dbContainer, dbName, sql);
       seeded = true;
       break;
     } catch {
@@ -149,17 +148,14 @@ async function provisionTenant({ slug, plan, email }) {
   const nginxFile = path.join(NGINX_DIR, `${slug}.${DOMAIN}.conf`);
   fs.writeFileSync(nginxFile, nginxConf);
 
-  // 6. Enable vhost + reload nginx
+  // 5. Enable vhost + reload nginx
   const enabledPath = `/etc/nginx/sites-enabled/${slug}.${DOMAIN}.conf`;
   if (!fs.existsSync(enabledPath)) {
     run(`ln -s ${nginxFile} ${enabledPath}`, '/');
   }
   run('nginx -s reload', '/');
 
-  // 7. Request SSL cert (uses existing wildcard — no extra certbot needed)
-  // Wildcard cert covers *.nemofirm.com automatically.
-
-  // 8. Send welcome email
+  // 6. Send welcome email — the raw token goes in the URL, not the hash
   await sendWelcomeEmail({ email, slug, domain: DOMAIN, setupToken });
 
   return { port };

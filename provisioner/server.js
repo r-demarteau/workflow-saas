@@ -42,8 +42,8 @@ app.post('/provision', async (req, res) => {
 
   try {
     const result = await provisionTenant({ slug, plan, email });
-    console.log(`[provision] Done: ${slug}.nemofirm.com on port ${result.port}`);
-    return res.json({ ok: true, url: `https://${slug}.nemofirm.com`, port: result.port });
+    console.log(`[provision] Done: ${slug}.teamdock.ai on port ${result.port}`);
+    return res.json({ ok: true, url: `https://${slug}.teamdock.ai`, port: result.port });
   } catch (err) {
     console.error(`[provision] Failed for ${slug}:`, err);
     return res.status(500).json({ error: String(err.message ?? err) });

@@ -18,9 +18,9 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
   const setupUrl     = `${workspaceUrl}/auth/magic?token=${setupToken}`;
 
   await transporter.sendMail({
-    from:    `"NemoFirm" <${process.env.SMTP_FROM || 'noreply@nemofirm.com'}>`,
+    from:    `"Teamdock" <${process.env.SMTP_FROM || 'noreply@teamdock.ai'}>`,
     to:      email,
-    subject: `Your NemoFirm workspace is ready — activate it now`,
+    subject: `Your Teamdock workspace is ready — activate it now`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -49,7 +49,7 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
     </div>
     <div class="body">
       <p style="color:#374151;font-size:15px;">Hi there,<br><br>
-      Your NemoFirm workspace has been provisioned at <strong>${workspaceUrl}</strong>.<br><br>
+      Your Teamdock workspace has been provisioned at <strong>${workspaceUrl}</strong>.<br><br>
       Click the button below to activate it — you'll connect your WooCommerce store and set up your login in just a few steps.</p>
 
       <br>
@@ -72,13 +72,13 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
       <p class="expiry">⏰ This activation link is valid for 14 days. If it expires, visit your workspace and click "Resend activation link".</p>
     </div>
     <div class="footer">
-      <p>NemoFirm · Questions? Reply to this email or contact support@${domain}</p>
+      <p>Teamdock · Questions? Reply to this email or contact support@${domain}</p>
     </div>
   </div>
 </body>
 </html>
     `,
-    text: `Your NemoFirm workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}\n\nWhat happens next:\n1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!\n\nWorkspace URL: ${workspaceUrl}`
+    text: `Your Teamdock workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}\n\nWhat happens next:\n1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!\n\nWorkspace URL: ${workspaceUrl}`
   });
 
   console.log(`[email] Welcome email sent to ${email}`);

@@ -11,7 +11,7 @@
 				'Orders, customers & tickets',
 				'Live chat',
 				'Email support',
-				'your-brand.nemofirm.com'
+				'your-brand.teamdock.ai'
 			],
 			cta: 'Start with Starter',
 			highlight: false
@@ -52,7 +52,7 @@
 </script>
 
 <svelte:head>
-	<title>Pricing — NemoFirm</title>
+	<title>Pricing — Teamdock</title>
 </svelte:head>
 
 <div class="pt-28 pb-24">

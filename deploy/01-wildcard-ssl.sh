@@ -1,12 +1,12 @@
 #!/bin/bash
-# ── Wildcard SSL certificate for *.nemofirm.com ───────────────────────────────
+# ── Wildcard SSL certificate for *.teamdock.ai ───────────────────────────────
 # Run this ONCE on the Hetzner server.
 # Requires: certbot, your DNS provider access to add a TXT record.
 #
 # Usage: bash deploy/01-wildcard-ssl.sh
 
 set -euo pipefail
-DOMAIN="nemofirm.com"
+DOMAIN="teamdock.ai"
 
 echo "==> Installing certbot..."
 apt-get update -q

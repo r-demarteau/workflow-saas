@@ -1,7 +1,7 @@
 {
-  "name": "nemofirm-provisioner",
+  "name": "teamdock-provisioner",
   "version": "1.0.0",
-  "description": "Tenant provisioning API for NemoFirm",
+  "description": "Tenant provisioning API for Teamdock",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

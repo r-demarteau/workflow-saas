@@ -40,7 +40,7 @@
 </script>
 
 <svelte:head>
-	<title>NemoFirm - WooCommerce order management for teams</title>
+	<title>Teamdock — ecommerce operations for teams</title>
 </svelte:head>
 
 <section class="motion-hero relative min-h-screen overflow-hidden bg-white pt-20 md:pt-28">
@@ -66,8 +66,8 @@
 			</h1>
 
 			<p class="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
-				NemoFirm gives your team a dedicated portal - orders, customers, tickets, live chat,
-				and AI - all synced with your WooCommerce store. Up and running on your own subdomain
+				Teamdock gives your team a dedicated portal — orders, customers, tickets, live chat,
+				and AI — all synced with your store. Up and running on your own subdomain
 				in minutes.
 			</p>
 
@@ -131,7 +131,7 @@
 			<div class="h-3 w-3 rounded-full bg-red-400"></div>
 			<div class="h-3 w-3 rounded-full bg-yellow-400"></div>
 			<div class="h-3 w-3 rounded-full bg-green-400"></div>
-			<div class="ml-3 flex-1 rounded bg-white px-3 py-1 text-xs text-gray-400">acme.nemofirm.com</div>
+			<div class="ml-3 flex-1 rounded bg-white px-3 py-1 text-xs text-gray-400">acme.teamdock.ai</div>
 		</div>
 		<div class="grid h-72 grid-cols-1 sm:grid-cols-4">
 			<div class="hidden sm:flex flex-col gap-3 border-r border-gray-100 bg-gray-50 p-4">

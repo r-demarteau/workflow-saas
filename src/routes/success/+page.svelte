@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>Welcome to NemoFirm!</title>
+	<title>Welcome to Teamdock!</title>
 </svelte:head>
 
 <div class="min-h-screen pt-28 pb-24 bg-gray-50 flex items-center justify-center">
@@ -57,12 +57,12 @@
 					<div class="mb-8 rounded-xl border border-brand-200 bg-brand-50 px-6 py-5">
 						<p class="text-sm font-medium text-brand-700 mb-1">Your workspace URL</p>
 						<a
-							href="https://{slug}.nemofirm.com"
+							href="https://{slug}.teamdock.ai"
 							target="_blank"
 							rel="noopener noreferrer"
 							class="text-xl font-bold text-brand-600 hover:underline break-all"
 						>
-							{slug}.nemofirm.com
+							{slug}.teamdock.ai
 						</a>
 						<p class="text-xs text-brand-500 mt-2">Live within a few minutes · Check your email for login details</p>
 					</div>
@@ -85,7 +85,7 @@
 					{/each}
 				</div>
 
-				<a href="mailto:support@nemofirm.com" class="btn-secondary w-full">
+				<a href="mailto:support@teamdock.ai" class="btn-secondary w-full">
 					Need help? Contact support
 				</a>
 			</div>

@@ -115,8 +115,8 @@ async function provisionTenant({ slug, plan, email }) {
   const dbContainer = `${slug}-db-1`;
 
   const sql = [
-    `INSERT INTO settings (id, setup_complete, magic_token, magic_token_exp, admin_email)`,
-    `VALUES (1, 0, ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)})`,
+    `INSERT INTO settings (id, config, setup_complete, magic_token, magic_token_exp, admin_email)`,
+    `VALUES (1, '{}', 0, ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)})`,
     `ON DUPLICATE KEY UPDATE`,
     `  magic_token=${mysql.escape(setupTokenHash)},`,
     `  magic_token_exp=${setupTokenExp},`,

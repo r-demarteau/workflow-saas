@@ -43,7 +43,7 @@
 	<title>Teamdock — ecommerce operations for teams</title>
 </svelte:head>
 
-<section class="motion-hero relative min-h-screen overflow-hidden bg-white pt-20 md:pt-28">
+<section class="motion-hero relative overflow-hidden bg-white pt-20 sm:min-h-screen md:pt-28">
 	<div class="hero-grid absolute inset-0"></div>
 	<div class="motion-field" aria-hidden="true">
 		<div class="motion-ribbon motion-ribbon-a"></div>
@@ -53,75 +53,32 @@
 		<div class="motion-sheen"></div>
 	</div>
 
-	<div class="relative z-10 mx-auto grid min-h-[760px] max-w-6xl grid-cols-1 items-center gap-14 px-6 pb-24 lg:grid-cols-[1.05fr_0.95fr]">
-		<div class="max-w-3xl">
-			<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white/80 px-4 py-1.5 text-sm font-semibold text-gray-700 shadow-sm shadow-brand-100/60 backdrop-blur">
-				<span class="h-2 w-2 rounded-full bg-brand-500 animate-pulse"></span>
-				Your WooCommerce workspace, live in minutes
-			</div>
-
-			<h1 class="text-3xl font-extrabold leading-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
-				Run your WooCommerce<br class="hidden sm:inline" />
-				store like a <span class="text-brand-600">pro team</span>
-			</h1>
-
-			<p class="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
-				Teamdock gives your team a dedicated portal — orders, customers, tickets, live chat,
-				and AI — all synced with your store. Up and running on your own subdomain
-				in minutes.
-			</p>
-
-			<div class="mt-10 flex flex-col gap-4 sm:flex-row">
-				<a href="/pricing" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-lg hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-transparent transition-colors duration-150">
-					Start free trial
-				</a>
-				<a href="/#features" class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white/80 px-8 py-4 text-base font-semibold text-gray-800 shadow-sm backdrop-blur hover:border-brand-200 hover:text-brand-700 transition-colors duration-150">
-					See features
-				</a>
-			</div>
-
-			<p class="mt-6 text-sm font-medium text-gray-500">Setup in under 5 min. Cancel any time. GDPR compliant.</p>
+	<div class="relative z-10 mx-auto flex sm:min-h-[560px] max-w-6xl flex-col items-start justify-center px-6 pb-32 pt-24 sm:pb-24 sm:pt-16">
+		<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white/80 px-4 py-1.5 text-sm font-semibold text-gray-700 shadow-sm shadow-brand-100/60 backdrop-blur">
+			<span class="h-2 w-2 rounded-full bg-brand-500 animate-pulse"></span>
+			Your WooCommerce workspace, live in minutes
 		</div>
 
-		<div class="relative hidden min-h-[560px] lg:block">
-			<div class="hero-panel hero-panel-main">
-				<div class="mb-6 flex items-center justify-between gap-6">
-					<div>
-						<p class="text-xs font-semibold uppercase text-gray-400">Today</p>
-						<h2 class="text-xl font-bold text-gray-900">Commerce command center</h2>
-					</div>
-					<div class="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">Live sync</div>
-				</div>
-				<div class="grid grid-cols-3 gap-3">
-					<div class="rounded-lg bg-gray-50 p-4">
-						<p class="text-xs text-gray-400">Orders</p>
-						<p class="mt-2 text-2xl font-bold text-gray-900">1,284</p>
-					</div>
-					<div class="rounded-lg bg-brand-50 p-4">
-						<p class="text-xs text-brand-400">Revenue</p>
-						<p class="mt-2 text-2xl font-bold text-brand-700">EUR 82k</p>
-					</div>
-					<div class="rounded-lg bg-gray-50 p-4">
-						<p class="text-xs text-gray-400">Tickets</p>
-						<p class="mt-2 text-2xl font-bold text-gray-900">36</p>
-					</div>
-				</div>
-				<div class="mt-6 space-y-3">
-					{#each ['WooCommerce order #1042 synced', 'AI drafted a refund reply', 'WhatsApp thread linked to Sarah J.'] as update}
-						<div class="flex items-center gap-3 rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
-							<div class="h-2.5 w-2.5 rounded-full bg-brand-500"></div>
-							<span class="text-sm font-medium text-gray-600">{update}</span>
-						</div>
-					{/each}
-				</div>
-			</div>
-			<div class="hero-panel hero-panel-float">
-				<p class="text-xs font-semibold uppercase text-gray-400">AI assistant</p>
-				<p class="mt-2 text-sm font-medium leading-relaxed text-gray-700">
-					Customer asks for invoice #45678. Drafted reply in Dutch with order context attached.
-				</p>
-			</div>
+		<h1 class="max-w-4xl text-4xl font-extrabold leading-tight text-gray-950 sm:text-5xl md:text-6xl lg:text-7xl">
+			Run your WooCommerce store<br class="hidden sm:inline" />
+			like a <span class="text-brand-600">pro team</span>
+		</h1>
+
+		<p class="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
+			Teamdock gives your team a dedicated portal — orders, customers, tickets, live chat,
+			and AI — all synced with your store. Up and running on your own subdomain in minutes.
+		</p>
+
+		<div class="mt-10 flex flex-col gap-4 sm:flex-row">
+			<a href="/pricing" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-lg hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-transparent transition-colors duration-150">
+				Start free trial
+			</a>
+			<a href="/#features" class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white/80 px-8 py-4 text-base font-semibold text-gray-800 shadow-sm backdrop-blur hover:border-brand-200 hover:text-brand-700 transition-colors duration-150">
+				See features
+			</a>
 		</div>
+
+		<p class="mt-6 text-sm font-medium text-gray-500">Setup in under 5 min. Cancel any time. GDPR compliant.</p>
 	</div>
 </section>
 
@@ -170,9 +127,9 @@
 	</div>
 </div>
 
-<section id="features" class="py-24">
+<section id="features" class="py-14 md:py-24">
 	<div class="mx-auto max-w-6xl px-6">
-		<div class="mb-16 text-center">
+		<div class="mb-10 md:mb-16 text-center">
 			<h2 class="text-3xl font-bold text-gray-900 md:text-4xl">Everything your team needs</h2>
 			<p class="mx-auto mt-4 max-w-xl text-lg text-gray-500">
 				One workspace. All your WooCommerce tools. No context switching.
@@ -191,7 +148,7 @@
 	</div>
 </section>
 
-<section class="border-y border-gray-200 bg-gray-50 py-16">
+<section class="border-y border-gray-200 bg-gray-50 py-10 md:py-16">
 	<div class="mx-auto max-w-6xl px-6">
 		<p class="mb-10 text-center text-sm font-medium uppercase tracking-wider text-gray-400">Trusted by WooCommerce teams across Europe</p>
 		<div class="grid grid-cols-2 gap-8 md:grid-cols-4">
@@ -204,7 +161,7 @@
 	</div>
 </section>
 
-<section class="py-24">
+<section class="py-14 md:py-24">
 	<div class="mx-auto max-w-3xl px-6 text-center">
 		<h2 class="text-4xl font-extrabold text-gray-900">Ready to launch your workspace?</h2>
 		<p class="mt-4 text-lg text-gray-500">Pick a plan, enter your company name, and your portal is live in minutes.</p>
@@ -225,17 +182,16 @@
 
 	.motion-field {
 		position: absolute;
-		top: -34%;
-		right: max(-420px, calc((100vw - 72rem) / 2 - 560px));
-		width: min(1680px, 112vw);
-		height: 1160px;
+		top: -5%;
+		right: -60px;
+		width: min(960px, 68vw);
+		height: 115vh;
 		pointer-events: none;
-		filter: saturate(1.15);
-		mask-image: linear-gradient(to bottom, black 0%, black 72%, transparent 98%);
-		-webkit-mask-image: linear-gradient(to bottom, black 0%, black 72%, transparent 98%);
-		border-bottom-left-radius: 520px;
-		border-bottom-right-radius: 520px;
-		overflow: hidden;
+		filter: saturate(1.2);
+		mask-image: linear-gradient(to right, transparent 0%, black 18%),
+		            linear-gradient(to bottom, black 60%, transparent 100%);
+		-webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%);
+		overflow: visible;
 	}
 
 	.motion-hero::after {
@@ -251,8 +207,8 @@
 
 	.motion-ribbon {
 		position: absolute;
-		width: 34%;
-		height: 142%;
+		width: 22%;
+		height: 160%;
 		border-radius: 999px;
 		transform-origin: 50% 0%;
 		mix-blend-mode: multiply;

@@ -30,8 +30,9 @@ for tenant_dir in "$TENANTS_DIR"/*/; do
 
   # Load secrets
   # shellcheck disable=SC1090
-  source <(grep -E '^(MYSQL_ROOT_PASSWORD|DB_NAME)' "$secrets_file")
-  db_name=$(grep 'DB_NAME' "$compose_file" | head -1 | sed 's/.*DB_NAME: *"\?//;s/"\?.*//')
+  source <(grep -E '^MYSQL_ROOT_PASSWORD' "$secrets_file")
+  # DB name is always nemo_{slug} with hyphens replaced by underscores — same as provision.js
+  db_name="nemo_${slug//-/_}"
 
   # Check container is running
   container="${slug}-db-1"

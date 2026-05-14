@@ -1,13 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
-	let videoEl: HTMLVideoElement;
-
-	onMount(() => {
-		// Ensure autoplay works after mount
-		if (videoEl) videoEl.play().catch(() => {});
-	});
-
 	const features = [
 		{
 			icon: '📦',
@@ -46,63 +37,137 @@
 	<title>NemoFirm — WooCommerce order management for teams</title>
 </svelte:head>
 
-<!-- Video Hero -->
-<section class="relative flex min-h-screen items-center justify-center overflow-hidden">
+<!-- Hero -->
+<section class="relative flex min-h-screen items-center justify-center overflow-hidden bg-white pt-16">
 
-	<!-- Background video -->
-	<video
-		bind:this={videoEl}
-		class="absolute inset-0 h-full w-full object-cover"
-		autoplay
-		muted
-		loop
-		playsinline
-	>
-		<!-- Primary: Pexels free stock video — office/business feel -->
-		<source src="https://videos.pexels.com/video-files/3205567/3205567-hd_1920_1080_25fps.mp4" type="video/mp4" />
-		<!-- Fallback: drop your own video at static/hero.mp4 -->
-		<source src="/hero.mp4" type="video/mp4" />
-	</video>
+	<!-- Animated gradient mesh -->
+	<div class="gradient-mesh" aria-hidden="true">
+		<div class="blob blob-1"></div>
+		<div class="blob blob-2"></div>
+		<div class="blob blob-3"></div>
+		<div class="blob blob-4"></div>
+		<div class="blob blob-5"></div>
+	</div>
 
-	<!-- Dark gradient overlay — bottom fades to white so content below blends -->
-	<div class="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/70"></div>
+	<!-- Noise texture overlay for depth -->
+	<div class="absolute inset-0 opacity-[0.03]" style="background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E')"></div>
 
 	<!-- Hero content -->
-	<div class="relative z-10 mx-auto max-w-5xl px-6 py-40 text-center">
-		<div class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-1.5 text-sm font-medium text-white/90 mb-8">
-			<span class="h-2 w-2 rounded-full bg-brand-400 animate-pulse"></span>
+	<div class="relative z-10 mx-auto max-w-5xl px-6 py-32 text-center">
+		<div class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm px-4 py-1.5 text-sm font-medium text-gray-600 mb-8 shadow-sm">
+			<span class="h-2 w-2 rounded-full bg-brand-500 animate-pulse"></span>
 			Your WooCommerce workspace, live in minutes
 		</div>
 
-		<h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight tracking-tight drop-shadow-lg">
+		<h1 class="text-5xl md:text-7xl font-extrabold text-gray-900 leading-tight tracking-tight">
 			Run your WooCommerce<br />
-			store like a <span class="text-brand-400">pro team</span>
+			store like a <span class="gradient-text">pro team</span>
 		</h1>
 
-		<p class="mt-6 text-xl text-white/75 max-w-2xl mx-auto leading-relaxed">
+		<p class="mt-6 text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
 			NemoFirm gives your team a dedicated portal — orders, customers, tickets, live chat, and AI
 			— all synced with your WooCommerce store. Up and running on your own subdomain in minutes.
 		</p>
 
 		<div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-			<a href="/pricing" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-lg hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-transparent transition-colors duration-150">
+			<a href="/pricing" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-lg hover:bg-brand-500 transition-colors duration-150">
 				Start free trial — no card needed
 			</a>
-			<a href="/#features" class="inline-flex items-center justify-center rounded-lg border border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-base font-semibold text-white hover:bg-white/20 transition-colors duration-150">
+			<a href="/#features" class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-8 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 transition-colors duration-150 shadow-sm">
 				See features
 			</a>
 		</div>
 
-		<p class="mt-6 text-sm text-white/50">Setup in &lt; 5 min · Cancel any time · GDPR compliant</p>
-
-		<!-- Scroll indicator -->
-		<div class="mt-16 flex flex-col items-center gap-2 text-white/40">
-			<span class="text-xs tracking-widest uppercase">Scroll</span>
-			<div class="h-8 w-px bg-gradient-to-b from-white/40 to-transparent animate-pulse"></div>
-		</div>
+		<p class="mt-6 text-sm text-gray-400">Setup in &lt; 5 min · Cancel any time · GDPR compliant</p>
 	</div>
 
 </section>
+
+<style>
+	/* ── Gradient mesh ───────────────────────────────────────────────── */
+	.gradient-mesh {
+		position: absolute;
+		inset: 0;
+		overflow: hidden;
+	}
+
+	.blob {
+		position: absolute;
+		border-radius: 50%;
+		filter: blur(80px);
+		opacity: 0.55;
+		will-change: transform;
+	}
+
+	/* Purple */
+	.blob-1 {
+		width: 600px; height: 600px;
+		background: radial-gradient(circle, #7c3aed, #4f46e5);
+		top: -10%; right: 5%;
+		animation: float1 14s ease-in-out infinite;
+	}
+	/* Blue */
+	.blob-2 {
+		width: 500px; height: 500px;
+		background: radial-gradient(circle, #3b82f6, #06b6d4);
+		top: 20%; right: 30%;
+		animation: float2 18s ease-in-out infinite;
+	}
+	/* Orange */
+	.blob-3 {
+		width: 450px; height: 450px;
+		background: radial-gradient(circle, #f97316, #eab308);
+		top: -5%; right: -5%;
+		animation: float3 16s ease-in-out infinite;
+	}
+	/* Pink */
+	.blob-4 {
+		width: 400px; height: 400px;
+		background: radial-gradient(circle, #ec4899, #f43f5e);
+		top: 30%; right: 10%;
+		animation: float4 20s ease-in-out infinite;
+	}
+	/* Teal accent */
+	.blob-5 {
+		width: 300px; height: 300px;
+		background: radial-gradient(circle, #14b8a6, #6366f1);
+		top: 5%; right: 45%;
+		animation: float5 12s ease-in-out infinite;
+	}
+
+	@keyframes float1 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		33%       { transform: translate(-40px, 30px) scale(1.05); }
+		66%       { transform: translate(20px, -20px) scale(0.97); }
+	}
+	@keyframes float2 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		40%       { transform: translate(30px, -50px) scale(1.08); }
+		70%       { transform: translate(-20px, 30px) scale(0.95); }
+	}
+	@keyframes float3 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		30%       { transform: translate(-30px, 40px) scale(1.1); }
+		60%       { transform: translate(40px, -10px) scale(0.95); }
+	}
+	@keyframes float4 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		50%       { transform: translate(-50px, -40px) scale(1.06); }
+	}
+	@keyframes float5 {
+		0%, 100% { transform: translate(0, 0) scale(1); }
+		45%       { transform: translate(35px, 25px) scale(1.12); }
+		80%       { transform: translate(-15px, -30px) scale(0.93); }
+	}
+
+	/* ── Gradient text ───────────────────────────────────────────────── */
+	.gradient-text {
+		background: linear-gradient(135deg, #6d28d9 0%, #3b82f6 40%, #f97316 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+</style>
 
 <!-- Mock UI — sits cleanly below the hero -->
 <div class="relative z-10 mx-auto max-w-5xl px-6 mt-20 mb-8">

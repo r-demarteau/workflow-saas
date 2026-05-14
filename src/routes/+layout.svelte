@@ -1,37 +1,21 @@
 <script lang="ts">
 	import '../app.css';
-	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
 
 	let { children } = $props();
-
-	let isHome = $derived($page.url.pathname === '/');
-	let scrolled = $state(false);
-
-	onMount(() => {
-		const onScroll = () => {
-			scrolled = window.scrollY > 80;
-		};
-		window.addEventListener('scroll', onScroll, { passive: true });
-		return () => window.removeEventListener('scroll', onScroll);
-	});
-
-	// Transparent only when: on homepage AND not scrolled past 80px
-	let transparent = $derived(isHome && !scrolled);
 </script>
 
-<nav class="fixed top-0 inset-x-0 z-50 transition-all duration-300 {transparent ? 'border-b border-white/10 bg-transparent' : 'border-b border-gray-100 bg-white/90 backdrop-blur-md'}">
+<nav class="fixed top-0 inset-x-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-md">
 	<div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
 		<a href="/" class="flex items-center gap-2">
 			<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white font-bold text-sm">N</div>
-			<span class="text-lg font-bold transition-colors duration-300 {transparent ? 'text-white' : 'text-gray-900'}">NemoFirm</span>
+			<span class="text-lg font-bold text-gray-900">NemoFirm</span>
 		</a>
 		<div class="hidden md:flex items-center gap-8">
-			<a href="/#features" class="text-sm font-medium transition-colors duration-300 {transparent ? 'text-white/80 hover:text-white' : 'text-gray-600 hover:text-gray-900'}">Features</a>
-			<a href="/pricing" class="text-sm font-medium transition-colors duration-300 {transparent ? 'text-white/80 hover:text-white' : 'text-gray-600 hover:text-gray-900'}">Pricing</a>
+			<a href="/#features" class="text-sm font-medium text-gray-600 hover:text-gray-900">Features</a>
+			<a href="/pricing" class="text-sm font-medium text-gray-600 hover:text-gray-900">Pricing</a>
 		</div>
 		<div class="flex items-center gap-3">
-			<a href="/pricing" class="transition-all duration-300 {transparent ? 'inline-flex items-center justify-center rounded-lg border border-white/30 bg-white/10 backdrop-blur-sm px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/20' : 'btn-primary text-sm px-5 py-2.5'}">Get started</a>
+			<a href="/pricing" class="btn-primary text-sm px-5 py-2.5">Get started</a>
 		</div>
 	</div>
 </nav>

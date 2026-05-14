@@ -69,7 +69,7 @@
 			and AI — all synced with your store. Up and running on your own subdomain in minutes.
 		</p>
 
-		<div class="mt-10 flex flex-col gap-4 sm:flex-row">
+		<div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
 			<a href="/pricing" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-8 py-4 text-base font-semibold text-white shadow-lg hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-transparent transition-colors duration-150">
 				Start free trial
 			</a>

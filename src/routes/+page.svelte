@@ -357,8 +357,8 @@
 	@media (max-width: 1023px) {
 		.motion-field {
 			top: -15%;
-			right: 0;
-			width: 100vw;
+			right: -25%;
+			width: 90vw;
 			height: 90vh;
 			border-bottom-left-radius: 50vw;
 			border-bottom-right-radius: 50vw;
@@ -369,8 +369,8 @@
 	@media (max-width: 639px) {
 		.motion-field {
 			top: -10%;
-			right: 0;
-			width: 100vw;
+			right: -30%;
+			width: 80vw;
 			height: 75vh;
 			border-bottom-left-radius: 50vw;
 			border-bottom-right-radius: 50vw;

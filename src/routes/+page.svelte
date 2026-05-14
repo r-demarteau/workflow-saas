@@ -1,4 +1,72 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
+	let canvas: HTMLCanvasElement;
+
+	onMount(() => {
+		const ctx = canvas.getContext('2d')!;
+		let raf: number;
+
+		const resize = () => {
+			canvas.width  = canvas.offsetWidth  * devicePixelRatio;
+			canvas.height = canvas.offsetHeight * devicePixelRatio;
+		};
+		resize();
+		window.addEventListener('resize', resize);
+
+		// Each blob: normalized position (0-1), radius fraction, hex color, velocity
+		const blobs = [
+			{ x: 0.78, y: 0.20, r: 0.52, hex: '#7c3aed', vx:  0.00018, vy:  0.00012 },
+			{ x: 0.92, y: 0.55, r: 0.44, hex: '#f97316', vx: -0.00014, vy:  0.00016 },
+			{ x: 0.65, y: 0.05, r: 0.38, hex: '#3b82f6', vx:  0.00010, vy: -0.00018 },
+			{ x: 0.88, y: 0.80, r: 0.36, hex: '#ec4899', vx: -0.00016, vy: -0.00010 },
+			{ x: 0.72, y: 0.45, r: 0.30, hex: '#06b6d4', vx:  0.00012, vy:  0.00014 },
+		];
+
+		function hexToRgb(hex: string) {
+			const r = parseInt(hex.slice(1,3),16);
+			const g = parseInt(hex.slice(3,5),16);
+			const b = parseInt(hex.slice(5,7),16);
+			return `${r},${g},${b}`;
+		}
+
+		function draw() {
+			const w = canvas.width, h = canvas.height;
+			ctx.clearRect(0, 0, w, h);
+
+			for (const b of blobs) {
+				const cx = b.x * w, cy = b.y * h;
+				const radius = b.r * Math.min(w, h);
+				const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+				grad.addColorStop(0,   `rgba(${hexToRgb(b.hex)}, 0.72)`);
+				grad.addColorStop(0.5, `rgba(${hexToRgb(b.hex)}, 0.28)`);
+				grad.addColorStop(1,   `rgba(${hexToRgb(b.hex)}, 0)`);
+				ctx.fillStyle = grad;
+				ctx.fillRect(0, 0, w, h);
+
+				b.x += b.vx; b.y += b.vy;
+				if (b.x < 0.45 || b.x > 1.15) b.vx *= -1;
+				if (b.y < -0.2 || b.y > 1.2)  b.vy *= -1;
+			}
+
+			// White fade — left 40% stays clean for text readability
+			const fade = ctx.createLinearGradient(0, 0, w * 0.65, 0);
+			fade.addColorStop(0,    'rgba(255,255,255,1)');
+			fade.addColorStop(0.45, 'rgba(255,255,255,0.85)');
+			fade.addColorStop(1,    'rgba(255,255,255,0)');
+			ctx.fillStyle = fade;
+			ctx.fillRect(0, 0, w, h);
+
+			raf = requestAnimationFrame(draw);
+		}
+		draw();
+
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener('resize', resize);
+		};
+	});
+
 	const features = [
 		{
 			icon: '📦',
@@ -40,17 +108,8 @@
 <!-- Hero -->
 <section class="relative flex min-h-screen items-center justify-center overflow-hidden bg-white pt-16">
 
-	<!-- Animated gradient mesh -->
-	<div class="gradient-mesh" aria-hidden="true">
-		<div class="blob blob-1"></div>
-		<div class="blob blob-2"></div>
-		<div class="blob blob-3"></div>
-		<div class="blob blob-4"></div>
-		<div class="blob blob-5"></div>
-	</div>
-
-	<!-- Noise texture overlay for depth -->
-	<div class="absolute inset-0 opacity-[0.03]" style="background-image:url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E')"></div>
+	<!-- Canvas gradient animation -->
+	<canvas bind:this={canvas} class="absolute inset-0 h-full w-full" aria-hidden="true"></canvas>
 
 	<!-- Hero content -->
 	<div class="relative z-10 mx-auto max-w-5xl px-6 py-32 text-center">
@@ -84,83 +143,8 @@
 </section>
 
 <style>
-	/* ── Gradient mesh ───────────────────────────────────────────────── */
-	.gradient-mesh {
-		position: absolute;
-		inset: 0;
-		overflow: hidden;
-	}
+	canvas { display: block; }
 
-	.blob {
-		position: absolute;
-		border-radius: 50%;
-		filter: blur(80px);
-		opacity: 0.55;
-		will-change: transform;
-	}
-
-	/* Purple */
-	.blob-1 {
-		width: 600px; height: 600px;
-		background: radial-gradient(circle, #7c3aed, #4f46e5);
-		top: -10%; right: 5%;
-		animation: float1 14s ease-in-out infinite;
-	}
-	/* Blue */
-	.blob-2 {
-		width: 500px; height: 500px;
-		background: radial-gradient(circle, #3b82f6, #06b6d4);
-		top: 20%; right: 30%;
-		animation: float2 18s ease-in-out infinite;
-	}
-	/* Orange */
-	.blob-3 {
-		width: 450px; height: 450px;
-		background: radial-gradient(circle, #f97316, #eab308);
-		top: -5%; right: -5%;
-		animation: float3 16s ease-in-out infinite;
-	}
-	/* Pink */
-	.blob-4 {
-		width: 400px; height: 400px;
-		background: radial-gradient(circle, #ec4899, #f43f5e);
-		top: 30%; right: 10%;
-		animation: float4 20s ease-in-out infinite;
-	}
-	/* Teal accent */
-	.blob-5 {
-		width: 300px; height: 300px;
-		background: radial-gradient(circle, #14b8a6, #6366f1);
-		top: 5%; right: 45%;
-		animation: float5 12s ease-in-out infinite;
-	}
-
-	@keyframes float1 {
-		0%, 100% { transform: translate(0, 0) scale(1); }
-		33%       { transform: translate(-40px, 30px) scale(1.05); }
-		66%       { transform: translate(20px, -20px) scale(0.97); }
-	}
-	@keyframes float2 {
-		0%, 100% { transform: translate(0, 0) scale(1); }
-		40%       { transform: translate(30px, -50px) scale(1.08); }
-		70%       { transform: translate(-20px, 30px) scale(0.95); }
-	}
-	@keyframes float3 {
-		0%, 100% { transform: translate(0, 0) scale(1); }
-		30%       { transform: translate(-30px, 40px) scale(1.1); }
-		60%       { transform: translate(40px, -10px) scale(0.95); }
-	}
-	@keyframes float4 {
-		0%, 100% { transform: translate(0, 0) scale(1); }
-		50%       { transform: translate(-50px, -40px) scale(1.06); }
-	}
-	@keyframes float5 {
-		0%, 100% { transform: translate(0, 0) scale(1); }
-		45%       { transform: translate(35px, 25px) scale(1.12); }
-		80%       { transform: translate(-15px, -30px) scale(0.93); }
-	}
-
-	/* ── Gradient text ───────────────────────────────────────────────── */
 	.gradient-text {
 		background: linear-gradient(135deg, #6d28d9 0%, #3b82f6 40%, #f97316 100%);
 		-webkit-background-clip: text;

@@ -102,6 +102,14 @@ async function provisionTenant({ slug, plan, email }) {
     `AUTH_SECRET=${authSecret}`,
     `SESSION_ENCRYPTION_KEY=${sessionEncryptionKey}`,
     `TICKET_WEBHOOK_TOKEN=${ticketWebhookToken}`,
+    // SMTP — propagated from provisioner env so tenant can resend magic links
+    `SMTP_HOST=${process.env.SMTP_HOST || ''}`,
+    `SMTP_PORT=${process.env.SMTP_PORT || '587'}`,
+    `SMTP_SECURE=${process.env.SMTP_SECURE || 'false'}`,
+    `SMTP_USER=${process.env.SMTP_USER || ''}`,
+    `SMTP_PASS=${process.env.SMTP_PASS || ''}`,
+    `SMTP_FROM=${process.env.SMTP_FROM || ''}`,
+    `PUBLIC_BASE_URL=https://${slug}.${DOMAIN}`,
   ].join('\n') + '\n';
 
   fs.writeFileSync(path.join(tenantDir, '.env.secrets'), secrets, { mode: 0o600 });

@@ -117,10 +117,14 @@ async function provisionTenant({ slug, plan, email }) {
   // 3. Start the stack
   run('docker compose up -d', tenantDir);
 
-  // 3b. Wait for DB to be healthy, then seed the hashed magic token + admin email.
+  // 3b. Wait for the app to finish running migrations (settings table must exist),
+  // then seed the hashed magic token + admin email.
+  // Uses 90 attempts × 3s = 4.5 min max — enough for a cold image start + migrations.
   // The password never appears in the host process list — it comes from the
   // container's own MYSQL_ROOT_PASSWORD env var, and SQL is piped via stdin.
   const dbContainer = `${slug}-db-1`;
+
+  const checkTableSql = `SELECT 1 FROM information_schema.tables WHERE table_schema=${mysql.escape(dbName)} AND table_name='settings' LIMIT 1;`;
 
   const sql = [
     `INSERT INTO settings (id, config, setup_complete, magic_token, magic_token_exp, admin_email)`,
@@ -132,14 +136,17 @@ async function provisionTenant({ slug, plan, email }) {
   ].join(' ');
 
   let seeded = false;
-  for (let attempt = 1; attempt <= 30; attempt++) {
+  for (let attempt = 1; attempt <= 90; attempt++) {
     try {
+      // First confirm the settings table exists (app has run migrations)
+      runSql(dbContainer, dbName, checkTableSql);
+      // Table exists — do the insert
       runSql(dbContainer, dbName, sql);
       seeded = true;
       break;
     } catch {
-      if (attempt === 30) throw new Error(`DB never became ready for tenant ${slug}`);
-      execSync('sleep 2');
+      if (attempt === 90) throw new Error(`DB/migrations never became ready for tenant ${slug}`);
+      execSync('sleep 3');
     }
   }
   console.log(`  [provision] magic token seeded (seeded=${seeded})`);

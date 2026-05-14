@@ -18,19 +18,16 @@ export const POST: RequestHandler = async ({ request }) => {
 		const session  = event.data.object;
 		const { slug, plan, email } = session.metadata as Record<string, string>;
 
-		try {
-			await provisionTenant({ slug, plan, email });
-		} catch (err) {
+		// Fire and forget — respond to Stripe immediately so it doesn't time out
+		// while Docker/nginx setup runs (can take 30-60s).
+		provisionTenant({ slug, plan, email }).catch((err: unknown) => {
 			const msg = String((err as Error).message ?? err);
 			if (msg.includes('already exists')) {
-				// Stripe retried a webhook we already processed — safe to ignore.
 				console.log(`[webhook] Tenant ${slug} already provisioned — skipping duplicate event`);
 			} else {
-				// Real failure: log loudly but still return 200 so Stripe stops retrying.
-				// The provisioner logs are the source of truth for manual follow-up.
 				console.error(`[webhook] Provisioning failed for ${slug}:`, err);
 			}
-		}
+		});
 	}
 
 	return json({ received: true });
@@ -66,5 +63,5 @@ async function provisionTenant({
 		throw new Error(`Provisioner returned ${res.status}: ${text}`);
 	}
 
-	console.log(`[webhook] Tenant provisioned: ${slug}.nemofirm.com (${plan})`);
+	console.log(`[webhook] Tenant provisioned: ${slug}.teamdock.ai (${plan})`);
 }

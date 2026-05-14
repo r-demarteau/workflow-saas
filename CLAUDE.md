@@ -148,12 +148,123 @@ Hetzner host, not in a container).
 | Memory   | 512 MB        | 256 MB       |
 | CPU      | 0.5 cores     | 0.25 cores   |
 
+## Production Server — Hetzner (91.99.103.153, Ubuntu 24.04)
+
+### Directory layout
+
+```
+/opt/nemofirm/
+  app-src/           ← woo_client_codex git clone (the TENANT app)
+  frontend-src/      ← workflow-saas git clone (THIS repo — provisioner lives here)
+    provisioner/
+      server.js
+      provision.js
+      .env           ← provisioner secrets (SMTP, PROVISION_API_SECRET, CERT_NAME, …)
+  tenants/
+    {slug}/
+      docker-compose.yml
+      .env.secrets   ← auto-generated per tenant (DB passwords, AUTH_SECRET, SMTP, …)
+  frontend/          ← built workflow-saas SvelteKit static output
+  backups/
+    YYYY-MM-DD/
+      {slug}.sql.gz  ← nightly MariaDB dumps (kept 14 days)
+```
+
+### Critical: two repos, one server
+
+| Path | Git remote | Purpose |
+|------|-----------|---------|
+| `/opt/nemofirm/app-src` | `workflow` (woo_client_codex) | Source for `workflow_portal-app:latest` Docker image |
+| `/opt/nemofirm/frontend-src` | `workflow-saas` (this repo) | Provisioner process + SvelteKit marketing site |
+
+**Always build the tenant Docker image from `/opt/nemofirm/app-src`, never from `frontend-src`.**
+Running `docker build` in `frontend-src` builds the marketing site and overwrites the tenant image — breaking all tenant containers.
+
+### Updating the tenant app image
+
+```bash
+cd /opt/nemofirm/app-src
+git pull origin main
+docker build -t workflow_portal-app:latest .
+
+# Recreate all tenant app containers (DB volumes untouched)
+for tenant in /opt/nemofirm/tenants/*/; do
+  slug=$(basename "$tenant")
+  [[ "$slug" == .* ]] && continue
+  docker compose -f "$tenant/docker-compose.yml" up -d --no-deps --force-recreate app
+done
+```
+
+### Updating the provisioner
+
+```bash
+cd /opt/nemofirm/frontend-src
+git pull origin main
+pm2 restart nemofirm-provisioner --update-env
+```
+
+### PM2
+
+The provisioner runs as PM2 process **`nemofirm-provisioner`** (id 0).
+Logs: `pm2 logs nemofirm-provisioner --lines 200 --nostream`
+
+### SSL certificate
+
+Wildcard cert is at `/etc/letsencrypt/live/nemofirm.com-0001/` (note the `-0001` suffix —
+certbot appended it on renewal). The provisioner `.env` must have:
+```
+CERT_NAME=nemofirm.com-0001
+```
+Without this the generated nginx vhosts point to the wrong cert path and all new tenants fail to serve HTTPS.
+
+### SMTP propagation
+
+The provisioner reads `SMTP_*` from its own `.env` and writes them into each tenant's
+`.env.secrets` at provision time. This lets the tenant app send resend-magic emails.
+If a tenant was provisioned before this was in place, manually append to their `.env.secrets`:
+
+```bash
+SMTP_HOST=$(grep ^SMTP_HOST /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_PORT=$(grep ^SMTP_PORT /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_SECURE=$(grep ^SMTP_SECURE /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_USER=$(grep ^SMTP_USER /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_PASS=$(grep ^SMTP_PASS /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_FROM=$(grep ^SMTP_FROM /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+
+printf "SMTP_HOST=%s\nSMTP_PORT=%s\nSMTP_SECURE=%s\nSMTP_USER=%s\nSMTP_PASS=%s\nSMTP_FROM=%s\nPUBLIC_BASE_URL=https://{slug}.nemofirm.com\n" \
+  "$SMTP_HOST" "$SMTP_PORT" "$SMTP_SECURE" "$SMTP_USER" "$SMTP_PASS" "$SMTP_FROM" \
+  >> /opt/nemofirm/tenants/{slug}/.env.secrets
+docker compose -f /opt/nemofirm/tenants/{slug}/docker-compose.yml up -d --no-deps app
+```
+
+### Nightly backups
+
+Cron: `0 2 * * * /opt/nemofirm/frontend-src/provisioner/backup.sh`
+Dumps all tenant DBs to `/opt/nemofirm/backups/YYYY-MM-DD/{slug}.sql.gz`, keeps 14 days.
+
+### Manually recovering a broken tenant
+
+If provisioning failed mid-way (settings table never seeded):
+1. Check the provisioner logs: `pm2 logs nemofirm-provisioner --lines 200 --nostream`
+2. Verify migrations ran: `docker exec {slug}-db-1 mariadb -u root -p"$ROOT_PASS" nemo_{slug} -e "SHOW TABLES;"`
+3. If table exists, seed manually:
+   ```sql
+   INSERT INTO settings (id, config, setup_complete, magic_token, magic_token_exp, admin_email)
+   VALUES (1, '{}', 0, 'placeholder', 0, 'admin@example.com')
+   ON DUPLICATE KEY UPDATE config=config;
+   ```
+4. Trigger resend: `curl -X POST https://{slug}.nemofirm.com/api/auth/resend-magic -H "Content-Type: application/json" -d '{"email":"admin@example.com"}'`
+5. If nginx vhost is missing: generate from template and symlink to sites-enabled, then `nginx -s reload`.
+
 ## Important Notes
 
 - The provisioner uses an **atomic spin-lock** on a `.port-counter.lock` file to
   prevent port collisions when two tenants are provisioned simultaneously.
 - Secrets are written to `.env.secrets` with mode `0600` (not in `docker-compose.yml`).
-- `pull_policy: never` in the Compose template — the image must already be
-  present on the host (pulled separately or built locally).
+- `pull_policy: never` in the Compose template — the image must already be present
+  on the host; build it from `/opt/nemofirm/app-src`.
 - The `magic_token` seeded into `settings` expires after 14 days; it's the
-  admin's one-time setup credential.
+  admin's one-time setup credential. The provisioner waits up to 4.5 min (90×3s)
+  for the `settings` table to appear (migrations run inside the app container on startup).
+- Do not `source` the provisioner `.env` in bash scripts — `SMTP_FROM` contains
+  angle brackets (`<noreply@...>`) which bash treats as redirection. Use `cut -d= -f2-` instead.

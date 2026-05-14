@@ -356,19 +356,25 @@
 
 	@media (max-width: 1023px) {
 		.motion-field {
-			top: -20%;
-			right: -50%;
-			width: min(1000px, 160vw);
-			opacity: 0.5;
+			top: -15%;
+			right: 0;
+			width: 100vw;
+			height: 90vh;
+			border-bottom-left-radius: 50vw;
+			border-bottom-right-radius: 50vw;
+			opacity: 0.6;
 		}
 	}
 
 	@media (max-width: 639px) {
 		.motion-field {
-			top: -30%;
-			right: -40%;
-			width: min(700px, 180vw);
-			opacity: 0.35;
+			top: -10%;
+			right: 0;
+			width: 100vw;
+			height: 75vh;
+			border-bottom-left-radius: 50vw;
+			border-bottom-right-radius: 50vw;
+			opacity: 0.55;
 		}
 	}
 

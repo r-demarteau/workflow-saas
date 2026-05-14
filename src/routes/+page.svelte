@@ -43,7 +43,7 @@
 	<title>NemoFirm - WooCommerce order management for teams</title>
 </svelte:head>
 
-<section class="motion-hero relative min-h-screen overflow-hidden bg-white pt-28">
+<section class="motion-hero relative min-h-screen overflow-hidden bg-white pt-20 md:pt-28">
 	<div class="hero-grid absolute inset-0"></div>
 	<div class="motion-field" aria-hidden="true">
 		<div class="motion-ribbon motion-ribbon-a"></div>
@@ -60,12 +60,12 @@
 				Your WooCommerce workspace, live in minutes
 			</div>
 
-			<h1 class="text-5xl font-extrabold leading-tight text-gray-950 md:text-7xl">
-				Run your WooCommerce<br />
+			<h1 class="text-3xl font-extrabold leading-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
+				Run your WooCommerce<br class="hidden sm:inline" />
 				store like a <span class="text-brand-600">pro team</span>
 			</h1>
 
-			<p class="mt-6 max-w-2xl text-xl leading-relaxed text-gray-600">
+			<p class="mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl">
 				NemoFirm gives your team a dedicated portal - orders, customers, tickets, live chat,
 				and AI - all synced with your WooCommerce store. Up and running on your own subdomain
 				in minutes.
@@ -133,8 +133,8 @@
 			<div class="h-3 w-3 rounded-full bg-green-400"></div>
 			<div class="ml-3 flex-1 rounded bg-white px-3 py-1 text-xs text-gray-400">acme.nemofirm.com</div>
 		</div>
-		<div class="grid h-72 grid-cols-4">
-			<div class="flex flex-col gap-3 border-r border-gray-100 bg-gray-50 p-4">
+		<div class="grid h-72 grid-cols-1 sm:grid-cols-4">
+			<div class="hidden sm:flex flex-col gap-3 border-r border-gray-100 bg-gray-50 p-4">
 				{#each ['Orders', 'Customers', 'Tickets', 'Chat', 'Products', 'Settings'] as item}
 					<div class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 {item === 'Orders' ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-200'} text-sm transition-colors">
 						<div class="h-4 w-4 rounded bg-current opacity-40"></div>
@@ -142,7 +142,7 @@
 					</div>
 				{/each}
 			</div>
-			<div class="col-span-3 p-6">
+			<div class="col-span-1 sm:col-span-3 p-6">
 				<div class="mb-4 flex items-center justify-between">
 					<h3 class="font-semibold text-gray-800">Recent orders</h3>
 					<div class="h-8 w-24 rounded-lg bg-brand-100"></div>
@@ -309,16 +309,16 @@
 	.hero-panel-main {
 		right: 0;
 		top: 18%;
-		width: 520px;
+		width: min(520px, 100%);
 		border-radius: 18px;
 		padding: 24px;
 		animation: panel-float 8s ease-in-out infinite;
 	}
 
 	.hero-panel-float {
-		right: 270px;
+		right: 52%;
 		bottom: 10%;
-		width: 300px;
+		width: min(300px, 46%);
 		border-radius: 16px;
 		padding: 18px;
 		animation: panel-float 8s ease-in-out infinite reverse;
@@ -357,9 +357,18 @@
 	@media (max-width: 1023px) {
 		.motion-field {
 			top: -20%;
-			right: -92%;
-			width: 1160px;
-			opacity: 0.55;
+			right: -50%;
+			width: min(1000px, 160vw);
+			opacity: 0.5;
+		}
+	}
+
+	@media (max-width: 639px) {
+		.motion-field {
+			top: -30%;
+			right: -40%;
+			width: min(700px, 180vw);
+			opacity: 0.35;
 		}
 	}
 

@@ -9,7 +9,7 @@
 		<a href="/" class="flex items-center gap-2.5">
 			<svg viewBox="116 117 280 280" height="28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 				<rect x="116" y="151" width="140" height="48" rx="10" fill="#0f172a"/>
-				<rect x="116" y="233" width="220" height="48" rx="10" fill="#4f46e5"/>
+				<rect x="116" y="233" width="220" height="48" rx="10" fill="#2438ec"/>
 				<rect x="116" y="315" width="280" height="48" rx="10" fill="#0f172a"/>
 			</svg>
 			<span class="text-lg font-bold tracking-tight"><span class="text-gray-900">team</span><span class="text-brand-600">dock</span></span>
@@ -32,7 +32,7 @@
 			<div class="flex items-center gap-2">
 				<svg viewBox="116 117 280 280" height="22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 					<rect x="116" y="151" width="140" height="48" rx="10" fill="#0f172a"/>
-					<rect x="116" y="233" width="220" height="48" rx="10" fill="#4f46e5"/>
+					<rect x="116" y="233" width="220" height="48" rx="10" fill="#2438ec"/>
 					<rect x="116" y="315" width="280" height="48" rx="10" fill="#0f172a"/>
 				</svg>
 				<span class="font-semibold"><span class="text-gray-900">team</span><span class="text-brand-600">dock</span></span>

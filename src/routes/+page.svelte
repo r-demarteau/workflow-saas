@@ -138,7 +138,7 @@
 				<div class="flex items-center gap-1.5 px-1 pb-2 border-b border-gray-200 mb-1">
 					<svg viewBox="116 117 280 280" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 						<rect x="116" y="151" width="140" height="48" rx="10" fill="#0f172a"/>
-						<rect x="116" y="233" width="220" height="48" rx="10" fill="#4f46e5"/>
+						<rect x="116" y="233" width="220" height="48" rx="10" fill="#2438ec"/>
 						<rect x="116" y="315" width="280" height="48" rx="10" fill="#0f172a"/>
 					</svg>
 					<span class="text-xs font-bold"><span class="text-gray-800">team</span><span class="text-brand-600">dock</span></span>

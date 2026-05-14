@@ -262,32 +262,6 @@
 		animation: sheen-drift 14s linear infinite;
 	}
 
-	.hero-panel {
-		position: absolute;
-		border: 1px solid rgba(226, 232, 240, 0.9);
-		background: rgba(255, 255, 255, 0.84);
-		box-shadow: 0 24px 80px rgba(15, 23, 42, 0.14);
-		backdrop-filter: blur(18px);
-	}
-
-	.hero-panel-main {
-		right: 0;
-		top: 18%;
-		width: min(520px, 100%);
-		border-radius: 18px;
-		padding: 24px;
-		animation: panel-float 8s ease-in-out infinite;
-	}
-
-	.hero-panel-float {
-		right: 52%;
-		bottom: 10%;
-		width: min(300px, 46%);
-		border-radius: 16px;
-		padding: 18px;
-		animation: panel-float 8s ease-in-out infinite reverse;
-	}
-
 	@keyframes ribbon-flow {
 		from {
 			translate: -16px -12px;
@@ -344,8 +318,7 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.motion-ribbon,
-		.motion-sheen,
-		.hero-panel {
+		.motion-sheen {
 			animation: none;
 		}
 	}

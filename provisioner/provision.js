@@ -10,6 +10,7 @@ const NGINX_DIR    = process.env.NGINX_DIR     || '/etc/nginx/sites-available';
 const PORT_FILE    = path.join(TENANTS_DIR, '.port-counter');
 const PORT_START   = 3100;
 const DOMAIN       = process.env.DOMAIN        || 'nemofirm.com';
+const CERT_NAME    = process.env.CERT_NAME      || DOMAIN;
 const APP_IMAGE    = process.env.APP_IMAGE      || 'ghcr.io/nemofirm/woo-client:latest';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -156,9 +157,10 @@ async function provisionTenant({ slug, plan, email }) {
     path.join(__dirname, 'templates', 'nginx.template.conf'), 'utf8'
   );
   const nginxConf = nginxTemplate
-    .replace(/\{\{SLUG\}\}/g,   slug)
-    .replace(/\{\{PORT\}\}/g,   String(port))
-    .replace(/\{\{DOMAIN\}\}/g, DOMAIN);
+    .replace(/\{\{SLUG\}\}/g,      slug)
+    .replace(/\{\{PORT\}\}/g,      String(port))
+    .replace(/\{\{DOMAIN\}\}/g,    DOMAIN)
+    .replace(/\{\{CERT_NAME\}\}/g, CERT_NAME);
 
   const nginxFile = path.join(NGINX_DIR, `${slug}.${DOMAIN}.conf`);
   fs.writeFileSync(nginxFile, nginxConf);

@@ -135,6 +135,14 @@
 		</div>
 		<div class="grid h-72 grid-cols-1 sm:grid-cols-4">
 			<div class="hidden sm:flex flex-col gap-3 border-r border-gray-100 bg-gray-50 p-4">
+				<div class="flex items-center gap-1.5 px-1 pb-2 border-b border-gray-200 mb-1">
+					<svg viewBox="116 151 280 212" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<rect x="116" y="151" width="140" height="48" rx="10" fill="#0f172a"/>
+						<rect x="116" y="233" width="220" height="48" rx="10" fill="#4f46e5"/>
+						<rect x="116" y="315" width="280" height="48" rx="10" fill="#0f172a"/>
+					</svg>
+					<span class="text-xs font-bold"><span class="text-gray-800">team</span><span class="text-brand-600">dock</span></span>
+				</div>
 				{#each ['Orders', 'Customers', 'Tickets', 'Chat', 'Products', 'Settings'] as item}
 					<div class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 {item === 'Orders' ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-200'} text-sm transition-colors">
 						<div class="h-4 w-4 rounded bg-current opacity-40"></div>

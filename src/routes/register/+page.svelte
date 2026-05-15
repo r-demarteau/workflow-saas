@@ -129,6 +129,21 @@
 					<p class="mt-1.5 text-xs text-gray-400">We'll send your login credentials to this address.</p>
 				</div>
 
+				<!-- Legal acceptance -->
+				<label class="flex items-start gap-3 cursor-pointer">
+					<input
+						type="checkbox"
+						required
+						class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 flex-shrink-0"
+					/>
+					<span class="text-xs text-gray-500 leading-relaxed">
+						I agree to the
+						<a href="/terms" target="_blank" rel="noopener" class="text-brand-600 hover:underline font-medium">Terms of Service</a>,
+						<a href="/privacy" target="_blank" rel="noopener" class="text-brand-600 hover:underline font-medium">Privacy Policy</a>,
+						and <a href="/dpa" target="_blank" rel="noopener" class="text-brand-600 hover:underline font-medium">Data Processing Agreement</a>.
+					</span>
+				</label>
+
 				{#if error}
 					<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
 						{error}

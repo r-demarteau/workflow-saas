@@ -41,6 +41,7 @@
 			<div class="flex gap-6">
 				<a href="/privacy" class="text-sm text-gray-500 hover:text-gray-700">Privacy</a>
 				<a href="/terms" class="text-sm text-gray-500 hover:text-gray-700">Terms</a>
+				<a href="/dpa" class="text-sm text-gray-500 hover:text-gray-700">DPA</a>
 			</div>
 		</div>
 	</div>

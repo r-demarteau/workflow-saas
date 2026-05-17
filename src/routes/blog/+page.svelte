@@ -28,20 +28,20 @@
 
 		<div class="grid gap-8">
 			<a
-				href="/blog/woocommerce-hetzner-hosting-guide"
+				href="/blog/how-to-set-up-woocommerce"
 				class="group flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm transition-all hover:border-brand-200 hover:shadow-md"
 			>
 				<div class="flex items-center gap-3">
-					<span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Hosting & setup</span>
-					<span class="text-xs text-gray-400">15 min read</span>
+					<span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Getting started</span>
+					<span class="text-xs text-gray-400">8 min read</span>
 				</div>
 				<h2 class="text-2xl font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
-					How to Host Your WooCommerce Store on Hetzner: A Complete Setup Guide
+					How to Set Up a WooCommerce Store: A Beginner's Guide (No Coding Required)
 				</h2>
 				<p class="text-gray-500 leading-relaxed">
-					Managed WordPress hosting costs €30–€100/month. A Hetzner VPS starts at €4/month and
-					gives you full control, EU data residency, and better performance. Here's the complete
-					setup: nginx, PHP 8.3, MariaDB, WordPress, and SSL in under an hour.
+					WooCommerce powers over 30% of all online stores — and you don't need to write a single
+					line of code to get one running. Pick a host, install WordPress in one click, add
+					WooCommerce from the plugin directory, and start selling.
 				</p>
 				<span class="text-sm font-semibold text-brand-600 group-hover:underline">
 					Read article →

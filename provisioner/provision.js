@@ -66,6 +66,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   }
 
   const port          = nextPort();
+  const wpPort        = wordpress ? nextPort() : null;
   const dbName        = `teamdock_${slug.replace(/-/g, '_')}`;
   const dbUser        = dbName;
   const dbPass               = randomString(24);
@@ -125,11 +126,25 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   const nginxTemplate = fs.readFileSync(
     path.join(__dirname, 'templates', 'nginx.template.conf'), 'utf8'
   );
+  const wpLocation = wpPort ? `
+    location /wp/ {
+        proxy_pass         http://127.0.0.1:${wpPort}/;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        client_max_body_size 64M;
+    }
+` : '';
+
   const nginxConf = nginxTemplate
-    .replace(/\{\{SLUG\}\}/g,      slug)
-    .replace(/\{\{PORT\}\}/g,      String(port))
-    .replace(/\{\{DOMAIN\}\}/g,    DOMAIN)
-    .replace(/\{\{CERT_NAME\}\}/g, CERT_NAME);
+    .replace(/\{\{SLUG\}\}/g,        slug)
+    .replace(/\{\{PORT\}\}/g,        String(port))
+    .replace(/\{\{DOMAIN\}\}/g,      DOMAIN)
+    .replace(/\{\{CERT_NAME\}\}/g,   CERT_NAME)
+    .replace(/\{\{WP_LOCATION\}\}/g, wpLocation);
 
   const nginxFile = path.join(NGINX_DIR, `${slug}.${DOMAIN}.conf`);
   fs.writeFileSync(nginxFile, nginxConf);
@@ -197,11 +212,11 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   console.log(`  [provision] magic token seeded (seeded=${seeded})`);
 
   // 5. Provision WordPress if requested
-  if (wordpress) {
-    const wpPort      = nextPort();
-    const wpDbName    = `wp_${slug.replace(/-/g, '_')}`;
-    const wpDbUser    = wpDbName;
-    const wpDbPass    = randomString(24);
+  if (wordpress && wpPort) {
+    const wpDbName = `wp_${slug.replace(/-/g, '_')}`;
+    const wpDbUser = wpDbName;
+    const wpDbPass = randomString(24);
+    const wpUrl    = `https://${slug}.${DOMAIN}/wp`;
 
     // Create WP DB and user in the existing MariaDB container
     const createWpDb = [
@@ -227,32 +242,14 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       .replace(/\{\{SLUG\}\}/g,       slug)
       .replace(/\{\{WP_PORT\}\}/g,    String(wpPort))
       .replace(/\{\{WP_DB_NAME\}\}/g, wpDbName)
-      .replace(/\{\{WP_DB_USER\}\}/g, wpDbUser);
+      .replace(/\{\{WP_DB_USER\}\}/g, wpDbUser)
+      .replace(/\{\{WP_URL\}\}/g,     wpUrl);
     fs.writeFileSync(path.join(tenantDir, 'docker-compose-wp.yml'), wpCompose);
 
-    // Start WordPress container
+    // Start WordPress container (nginx /wp/ location already written above)
     run('docker compose -f docker-compose-wp.yml up -d', tenantDir);
 
-    // Write WordPress nginx vhost
-    const wpNginxTemplate = fs.readFileSync(
-      path.join(__dirname, 'templates', 'nginx-wp.template.conf'), 'utf8'
-    );
-    const wpNginxConf = wpNginxTemplate
-      .replace(/\{\{SLUG\}\}/g,      slug)
-      .replace(/\{\{DOMAIN\}\}/g,    DOMAIN)
-      .replace(/\{\{CERT_NAME\}\}/g, CERT_NAME)
-      .replace(/\{\{WP_PORT\}\}/g,   String(wpPort));
-
-    const wpNginxFile = path.join(NGINX_DIR, `wp.${slug}.${DOMAIN}.conf`);
-    fs.writeFileSync(wpNginxFile, wpNginxConf);
-
-    const wpEnabledPath = `/etc/nginx/sites-enabled/wp.${slug}.${DOMAIN}.conf`;
-    if (!fs.existsSync(wpEnabledPath)) {
-      run(`ln -s ${wpNginxFile} ${wpEnabledPath}`, '/');
-    }
-    run('nginx -s reload', '/');
-
-    console.log(`  [provision] WordPress live at wp.${slug}.${DOMAIN} (port ${wpPort})`);
+    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort})`);
   }
 
   // 6. Send welcome email — the raw token goes in the URL, not the hash

@@ -194,7 +194,7 @@
 								<span class="text-sm font-medium text-gray-900">Add WordPress hosting</span>
 								<span class="text-sm font-bold text-brand-700">+€19/mo</span>
 							</div>
-							<p class="text-xs text-gray-500 mt-0.5">Isolated WordPress site at <span class="font-mono">wp.{slug || 'your-brand'}.teamdock.ai</span></p>
+							<p class="text-xs text-gray-500 mt-0.5">Isolated WordPress site at <span class="font-mono">{slug || 'your-brand'}.teamdock.ai/wp</span></p>
 						</div>
 					</div>
 				</label>

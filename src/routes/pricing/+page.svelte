@@ -177,7 +177,7 @@
 							<h3 class="text-lg font-bold text-gray-900">WordPress hosting</h3>
 							<span class="rounded-full bg-gray-100 px-3 py-0.5 text-xs font-medium text-gray-600">Add-on · any plan</span>
 						</div>
-						<p class="mt-1 text-sm text-gray-500">Add a fully isolated WordPress site at <span class="font-mono text-brand-600">wp.your-brand.teamdock.ai</span>. Managed for you — no server setup needed.</p>
+						<p class="mt-1 text-sm text-gray-500">Add a fully isolated WordPress site at <span class="font-mono text-brand-600">your-brand.teamdock.ai/wp</span>. Managed for you — no server setup needed.</p>
 						<ul class="mt-3 flex flex-wrap gap-x-6 gap-y-1">
 							{#each ['Isolated container', 'Automatic SSL', 'MariaDB included', 'Ready in minutes'] as f}
 								<li class="flex items-center gap-1.5 text-xs text-gray-500">

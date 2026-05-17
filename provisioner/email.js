@@ -68,6 +68,7 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, w
     .footer { padding: 24px 40px; border-top: 1px solid #e5e7eb; }
     .footer p { font-size: 12px; color: #9ca3af; margin: 0; }
     .expiry { font-size: 12px; color: #9ca3af; margin-top: 16px; }
+    .step-label { display: inline-block; background: #2438ec; color: #fff; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 2px 7px; margin-right: 6px; vertical-align: middle; letter-spacing: .03em; }
   </style>
 </head>
 <body>
@@ -77,23 +78,38 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, w
     </div>
     <div class="body">
       <p style="color:#374151;font-size:15px;">Hi there,<br><br>
-      Your Teamdock workspace has been provisioned at <strong>${workspaceUrl}</strong>.<br><br>
-      Click the button below to activate it — you'll connect your WooCommerce store and set up your login in just a few steps.</p>
+      Your Teamdock workspace has been provisioned at <strong>${workspaceUrl}</strong>.${hasWp ? ' Follow the two steps below to get started.' : ' Click the button below to activate it — you\'ll connect your WooCommerce store and set up your login in just a few steps.'}</p>
 
-      <br>
-      <a href="${setupUrl}" class="btn">Activate my workspace →</a>
+      ${hasWp ? `
+      <p style="margin:28px 0 0;font-size:13px;font-weight:700;color:#111827;"><span class="step-label">STEP 1</span> Set up WordPress &amp; WooCommerce</p>
+      <div class="info-box" style="margin-top:10px;border-color:#bbd0ff;background:#f0f4ff;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#2438ec;text-transform:uppercase;letter-spacing:.05em;">🌐 Your WordPress site</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#374151;">${wpInstalled ? 'Your WordPress site is installed and ready.' : 'Your WordPress site has been provisioned.'} Log in with the credentials below, install WooCommerce, then go to <em>WooCommerce → Settings → Advanced → REST API</em> to generate your keys.</p>
+        <a href="${wpAdminUrl}" style="color:#2438ec;font-weight:600;word-break:break-all;">${wpAdminUrl}</a>
+        <table style="margin-top:14px;border-collapse:collapse;width:100%;">
+          <tr><td style="font-size:12px;font-weight:700;color:#6b7280;padding:4px 0;width:120px;">Username</td><td style="font-size:14px;color:#111827;font-family:monospace;">${wpAdminUser}</td></tr>
+          <tr><td style="font-size:12px;font-weight:700;color:#6b7280;padding:4px 0;">Password</td><td style="font-size:14px;color:#111827;font-family:monospace;">${wpAdminPass}</td></tr>
+        </table>
+        <p style="margin:12px 0 0;font-size:12px;color:#6b7280;">⚠️ Change this password after your first login.</p>
+      </div>
 
-      <div class="url-box" style="margin-top:28px;">
+      <p style="margin:28px 0 0;font-size:13px;font-weight:700;color:#111827;"><span class="step-label">STEP 2</span> Activate your Teamdock workspace</p>
+      <p style="margin:8px 0 16px;font-size:14px;color:#374151;">Once WooCommerce is installed and your REST API keys are ready, click below to connect your store and complete setup.</p>
+      ` : ''}
+
+      <a href="${setupUrl}" class="btn">${hasWp ? 'Activate my workspace →' : 'Activate my workspace →'}</a>
+
+      <div class="url-box" style="margin-top:${hasWp ? '16px' : '28px'};">
         <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#5c83fc;text-transform:uppercase;letter-spacing:.05em;">Or copy this link</p>
         <a href="${setupUrl}">${setupUrl}</a>
       </div>
 
-      ${wpCredentialsHtml}
-
+      ${!hasWp ? `
       <div class="info-box">
         <p style="margin:0 0 12px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">What happens next</p>
         ${nextStepsHtml}
       </div>
+      ` : ''}
 
       <p class="expiry">⏰ This activation link is valid for 14 days. If it expires, visit your workspace and click "Resend activation link".</p>
 
@@ -110,7 +126,7 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, w
 </body>
 </html>
     `,
-    text: `Your Teamdock workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}${wpCredentialsText}\nWhat happens next:\n${hasWp ? '1. Log in to WordPress admin and install WooCommerce\n2. Generate WooCommerce REST API keys\n3. Connect your store via the activation link\n4. Done!' : '1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!'}\n\nBookmark your login page: ${workspaceUrl}/login`
+    text: `Your Teamdock workspace is ready!\n\n${hasWp ? `STEP 1 — Set up WordPress & WooCommerce\n${wpAdminUrl}\nUsername: ${wpAdminUser}\nPassword: ${wpAdminPass}\n(Change this password after first login)\n\nInstall WooCommerce, then generate REST API keys under WooCommerce → Settings → Advanced → REST API.\n\nSTEP 2 — Activate your Teamdock workspace\n` : ''}Activate it here (valid 14 days):\n${setupUrl}${!hasWp ? wpCredentialsText : ''}\n${!hasWp ? `What happens next:\n1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!\n\n` : ''}Bookmark your login page: ${workspaceUrl}/login`
   });
 
   console.log(`[email] Welcome email sent to ${email}`);

@@ -52,8 +52,7 @@ function runSql(dbContainer, dbName, sql) {
   console.log(`  $ docker exec -i ${dbContainer} mariadb [sql via stdin]`);
   // $MYSQL_ROOT_PASSWORD is already set in the container's environment (.env.secrets).
   // Using it here means the password never appears in the host process list.
-  // --batch --exit-on-error ensures the CLI exits non-zero on SQL errors so execSync throws.
-  const cmd = `docker exec -i ${dbContainer} sh -c 'mariadb --batch --exit-on-error -u root -p"$MYSQL_ROOT_PASSWORD" "${dbName}"'`;
+  const cmd = `docker exec -i ${dbContainer} sh -c 'mariadb -u root -p"$MYSQL_ROOT_PASSWORD" "${dbName}"'`;
   execSync(cmd, { input: sql + '\n', encoding: 'utf8', stdio: ['pipe', 'inherit', 'inherit'] });
 }
 
@@ -149,8 +148,7 @@ async function provisionTenant({ slug, plan, email }) {
   // is sometimes not accepted by mysql2 over TCP. ALTER USER via the root socket
   // (docker exec) re-hashes it correctly before the app ever tries to connect.
   const dbContainer = `${slug}-db-1`;
-  // Force mysql_native_password explicitly — MariaDB 11.4 defaults to ed25519 which mysql2 can't authenticate.
-  const fixAuthSql = `ALTER USER ${mysql.escape(dbUser)}@'%' IDENTIFIED VIA mysql_native_password USING PASSWORD(${mysql.escape(dbPass)}); FLUSH PRIVILEGES;`;
+  const fixAuthSql = `ALTER USER ${mysql.escape(dbUser)}@'%' IDENTIFIED BY ${mysql.escape(dbPass)}; FLUSH PRIVILEGES;`;
   for (let attempt = 1; attempt <= 30; attempt++) {
     try {
       runSql(dbContainer, 'mysql', fixAuthSql);
@@ -170,11 +168,12 @@ async function provisionTenant({ slug, plan, email }) {
   // Uses 90 attempts × 3s = 4.5 min max — enough for a cold image start + migrations.
   // The password never appears in the host process list — it comes from the
   // container's own MYSQL_ROOT_PASSWORD env var, and SQL is piped via stdin.
-  const checkTableSql = `SELECT 1 FROM information_schema.tables WHERE table_schema=${mysql.escape(dbName)} AND table_name='settings' LIMIT 1;`;
+  // Wait for migration 011 (setup_complete column) — not just the table — before seeding.
+  const checkTableSql = `SELECT 1 FROM information_schema.columns WHERE table_schema=${mysql.escape(dbName)} AND table_name='settings' AND column_name='setup_complete' LIMIT 1;`;
 
   const sql = [
-    `INSERT INTO settings (id, config, setup_complete, magic_token, magic_token_exp, admin_email)`,
-    `VALUES (1, '{}', 0, ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)})`,
+    `INSERT INTO settings (id, config, magic_token, magic_token_exp, admin_email)`,
+    `VALUES (1, '{}', ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)})`,
     `ON DUPLICATE KEY UPDATE`,
     `  magic_token=${mysql.escape(setupTokenHash)},`,
     `  magic_token_exp=${setupTokenExp},`,

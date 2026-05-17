@@ -389,9 +389,23 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           wpInstalled = true;
           console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
           // Set pretty permalinks so Apache routes /wp-json/ to index.php.
-          // Without this the REST API returns 404 — Application Password auth fails.
-          execFileSync('docker', wpCli(['rewrite', 'structure', '/%postname%/', '--hard']), { stdio: 'inherit' });
-          console.log('  [provision] permalink structure set');
+          // wp rewrite --hard can't write .htaccess as uid 33 (root-owned file), so
+          // write it via docker exec (runs as root) then flush rules via WP-CLI.
+          const htaccess = [
+            '# BEGIN WordPress',
+            '<IfModule mod_rewrite.c>',
+            'RewriteEngine On',
+            'RewriteBase /',
+            'RewriteRule ^index\\.php$ - [L]',
+            'RewriteCond %{REQUEST_FILENAME} !-f',
+            'RewriteCond %{REQUEST_FILENAME} !-d',
+            'RewriteRule . /index.php [L]',
+            '</IfModule>',
+            '# END WordPress',
+          ].join('\n');
+          execFileSync('docker', ['exec', wpContainer, 'bash', '-c', `printf '%s\\n' ${JSON.stringify(htaccess)} > /var/www/html/.htaccess`], { stdio: 'inherit' });
+          execFileSync('docker', wpCli(['rewrite', 'structure', '/%postname%/']), { stdio: 'inherit' });
+          console.log('  [provision] permalink structure set and .htaccess written');
           break;
         } catch (err) {
           if (attempt === 30) throw new Error(`wp core install failed after 30 attempts: ${err.message}`);

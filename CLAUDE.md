@@ -239,7 +239,7 @@ docker compose -f /opt/teamdock/tenants/{slug}/docker-compose.yml up -d --no-dep
 
 ### Nightly backups
 
-Cron: `0 2 * * * /opt/teamdock/frontend-src/provisioner/backup.sh`
+Cron: `0 2 * * * /opt/teamdock/frontend-src/provisioner/backup.sh >> /var/log/teamdock-backup.log 2>&1`
 Dumps all tenant DBs to `/opt/teamdock/backups/YYYY-MM-DD/{slug}.sql.gz`, keeps 14 days.
 
 ### Manually recovering a broken tenant

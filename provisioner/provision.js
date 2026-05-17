@@ -357,11 +357,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       try { fs.unlinkSync(patchFile); } catch {}
       execFileSync('docker', ['exec', wpContainer, 'php', '/tmp/patch.php'], { stdio: 'inherit' });
       console.log('  [provision] wp-config.php patched');
-      // Ensure wp-content/upgrade exists and is writable by www-data so that
-      // the WP-CLI container (running as www-data) can install plugins without
-      // hitting "Could not create directory" errors.
-      execFileSync('docker', ['exec', wpContainer, 'mkdir', '-p', '/var/www/html/wp-content/upgrade'], { stdio: 'inherit' });
-      execFileSync('docker', ['exec', wpContainer, 'chown', 'www-data:www-data', '/var/www/html/wp-content/upgrade'], { stdio: 'inherit' });
+      // Fix wp-content ownership so the WP-CLI container (running as www-data)
+      // can install plugins and create subdirs like wp-content/upgrade.
+      execFileSync('docker', ['exec', wpContainer, 'chown', '-R', 'www-data:www-data', '/var/www/html/wp-content'], { stdio: 'inherit' });
     } catch (err) {
       console.error(`  [provision] ERROR patching wp-config.php: ${err.message}`);
     }

@@ -127,16 +127,31 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   const nginxTemplate = fs.readFileSync(
     path.join(__dirname, 'templates', 'nginx.template.conf'), 'utf8'
   );
-  const wpLocation = wpPort ? `
-    location /wp/ {
-        proxy_pass         http://127.0.0.1:${wpPort}/;
+  const wpProxyHeaders = `
         proxy_http_version 1.1;
         proxy_set_header   Host $host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_read_timeout 300s;
-        client_max_body_size 64M;
+        client_max_body_size 64M;`;
+
+  // WordPress paths that nginx must proxy to the WP container.
+  // /wp/ is the canonical frontend path; the rest handle redirects that
+  // WordPress core generates with absolute paths (e.g. the install wizard
+  // redirects to /wp-admin/install.php before WP_SITEURL is fully applied).
+  const wpLocation = wpPort ? `
+    location /wp/ {
+        proxy_pass         http://127.0.0.1:${wpPort}/;${wpProxyHeaders}
+    }
+    location /wp-admin/ {
+        proxy_pass         http://127.0.0.1:${wpPort}/wp-admin/;${wpProxyHeaders}
+    }
+    location = /wp-login.php {
+        proxy_pass         http://127.0.0.1:${wpPort}/wp-login.php;${wpProxyHeaders}
+    }
+    location = /xmlrpc.php {
+        proxy_pass         http://127.0.0.1:${wpPort}/xmlrpc.php;${wpProxyHeaders}
     }
 ` : '';
 

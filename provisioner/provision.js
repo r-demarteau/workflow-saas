@@ -138,19 +138,26 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         proxy_read_timeout 300s;
         client_max_body_size 64M;`;
 
-  // WordPress paths that nginx must proxy to the WP container.
-  // /wp/ is the canonical frontend path; the rest handle redirects that
-  // WordPress core generates with absolute paths (e.g. the install wizard
-  // redirects to /wp-admin/install.php before WP_SITEURL is fully applied).
+  // WordPress paths.
+  // /wp/ is the canonical proxy path — all WP URLs including wp-admin use this prefix.
+  // WP_SITEURL is set to https://{slug}.{domain}/wp so WordPress generates links like
+  // /wp/wp-admin/ and sets login cookies scoped to path /wp/.
+  //
+  // /wp-admin/ and /wp-login.php redirect to /wp/... so that any bookmarked or
+  // externally-generated bare links still work.  Proxying them directly would cause
+  // a cookie-path mismatch (cookies set at /wp/ are not sent for /wp-admin/ requests)
+  // which makes WordPress log the user out on every page load.
+  //
+  // /xmlrpc.php is kept as a direct proxy because REST clients don't follow redirects.
   const wpLocation = wpPort ? `
     location /wp/ {
         proxy_pass         http://127.0.0.1:${wpPort}/;${wpProxyHeaders}
     }
     location /wp-admin/ {
-        proxy_pass         http://127.0.0.1:${wpPort}/wp-admin/;${wpProxyHeaders}
+        return 301 /wp/wp-admin$request_uri;
     }
     location = /wp-login.php {
-        proxy_pass         http://127.0.0.1:${wpPort}/wp-login.php;${wpProxyHeaders}
+        return 301 /wp/wp-login.php$is_args$args;
     }
     location = /xmlrpc.php {
         proxy_pass         http://127.0.0.1:${wpPort}/xmlrpc.php;${wpProxyHeaders}
@@ -322,7 +329,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         `--dbuser=${wpDbUser}`,
         `--dbpass=${wpDbPass}`,
         `--dbhost=${slug}-db-1`,
-        `--extra-php=define('WP_HOME','${wpUrl}');define('WP_SITEURL','${wpUrl}');`,
+        // COOKIEPATH='/' ensures login cookies are sent for /wp/wp-admin/ and any
+        // other path, preventing the logout loop caused by a /wp/ scoped cookie.
+        `--extra-php=define('WP_HOME','${wpUrl}');define('WP_SITEURL','${wpUrl}');define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');`,
       ]), { stdio: 'inherit' });
 
       // Run headless core install — retries handle the brief window while MariaDB finishes init.

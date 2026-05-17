@@ -77,6 +77,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   const setupToken           = randomString(32);           // raw — goes in email URL
   const setupTokenHash       = hashToken(setupToken);      // stored in DB
   const setupTokenExp        = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
+  const wpUrl                = wordpress ? `https://${slug}.${DOMAIN}/wp` : null;
 
   // 1. Create tenant directory
   fs.mkdirSync(tenantDir, { recursive: true });
@@ -187,12 +188,14 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   const checkTableSql = `SELECT 1 FROM information_schema.columns WHERE table_schema=${mysql.escape(dbName)} AND table_name='settings' AND column_name='magic_token' LIMIT 1;`;
 
   const sql = [
-    `INSERT INTO settings (id, config, magic_token, magic_token_exp, admin_email)`,
-    `VALUES (1, '{}', ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)})`,
+    `INSERT INTO settings (id, config, magic_token, magic_token_exp, admin_email, wordpress, wp_url)`,
+    `VALUES (1, '{}', ${mysql.escape(setupTokenHash)}, ${setupTokenExp}, ${mysql.escape(email)}, ${wordpress ? 1 : 0}, ${wpUrl ? mysql.escape(wpUrl) : 'NULL'})`,
     `ON DUPLICATE KEY UPDATE`,
     `  magic_token=${mysql.escape(setupTokenHash)},`,
     `  magic_token_exp=${setupTokenExp},`,
-    `  admin_email=${mysql.escape(email)};`,
+    `  admin_email=${mysql.escape(email)},`,
+    `  wordpress=${wordpress ? 1 : 0},`,
+    `  wp_url=${wpUrl ? mysql.escape(wpUrl) : 'NULL'};`,
   ].join(' ');
 
   let seeded = false;
@@ -216,7 +219,6 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     const wpDbName = `wp_${slug.replace(/-/g, '_')}`;
     const wpDbUser = wpDbName;
     const wpDbPass = randomString(24);
-    const wpUrl    = `https://${slug}.${DOMAIN}/wp`;
 
     // Create WP DB and user in the existing MariaDB container
     const createWpDb = [

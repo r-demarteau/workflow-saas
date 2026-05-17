@@ -12,7 +12,7 @@ function createTransport() {
   });
 }
 
-async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, wpAdminUser, wpAdminPass }) {
+async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, wpAdminUser, wpAdminPass, wpInstalled = false }) {
   const transporter = createTransport();
   const workspaceUrl = `https://${slug}.${domain}`;
   const setupUrl     = `${workspaceUrl}/auth/magic?token=${setupToken}`;
@@ -21,7 +21,7 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, w
   const wpCredentialsHtml = hasWp ? `
       <div class="info-box" style="margin-top:24px;border-color:#bbd0ff;background:#f0f4ff;">
         <p style="margin:0 0 12px;font-size:12px;font-weight:600;color:#2438ec;text-transform:uppercase;letter-spacing:.05em;">🌐 Your WordPress site</p>
-        <p style="margin:0 0 8px;font-size:14px;color:#374151;">Your WordPress site is ready and installed. Log in to your WordPress admin to install WooCommerce and generate REST API keys:</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#374151;">${wpInstalled ? 'Your WordPress site is installed and ready.' : 'Your WordPress site has been provisioned — use the credentials below to access the admin.'} Log in to install WooCommerce and generate REST API keys:</p>
         <a href="${wpAdminUrl}" style="color:#2438ec;font-weight:600;word-break:break-all;">${wpAdminUrl}</a>
         <table style="margin-top:14px;border-collapse:collapse;width:100%;">
           <tr><td style="font-size:12px;font-weight:700;color:#6b7280;padding:4px 0;width:120px;">Username</td><td style="font-size:14px;color:#111827;font-family:monospace;">${wpAdminUser}</td></tr>

@@ -353,13 +353,16 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}`);
   }
 
-  // 6. Send welcome email — the raw token goes in the URL, not the hash
+  // 6. Send welcome email — the raw token goes in the URL, not the hash.
+  // Always include WP credentials when WordPress was provisioned: credentials are
+  // generated before the WP-CLI block runs, so they're valid even if auto-install
+  // failed and the tenant needs to use them for the manual install wizard.
   await sendWelcomeEmail({
     email,
     slug,
     domain: DOMAIN,
     setupToken,
-    ...(wpInstalled && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass }),
+    ...(wordpress && wpPort && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass, wpInstalled }),
   });
 
   return { port };

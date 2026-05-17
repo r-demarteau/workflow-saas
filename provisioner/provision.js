@@ -154,7 +154,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         proxy_pass         http://127.0.0.1:${wpPort}/;${wpProxyHeaders}
     }
     location /wp-admin/ {
-        return 301 /wp/wp-admin$request_uri;
+        return 301 /wp$request_uri;
     }
     location = /wp-login.php {
         return 301 /wp/wp-login.php$is_args$args;

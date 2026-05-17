@@ -512,6 +512,8 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     }
 
     // Step G: if we have keys, encrypt and pre-seed into the tenant app — skip setup wizard.
+    // After writing to the DB we restart the app container so it reloads its in-memory
+    // settings cache (appSettings is populated once at startup and won't see the SQL UPDATE).
     if (wcApiKey && wcApiSecret) {
       try {
         const config = JSON.stringify({
@@ -522,6 +524,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         const autoSql = `UPDATE settings SET config=${mysql.escape(config)}, setup_complete=1, magic_token=NULL, magic_token_exp=NULL WHERE id=1;`;
         runSql(dbContainer, dbName, autoSql);
         console.log('  [provision] app pre-configured — setup wizard bypassed');
+        // Restart app so it picks up the new settings from the DB.
+        run('docker compose restart app', tenantDir);
+        console.log('  [provision] app restarted — settings cache refreshed');
       } catch (err) {
         console.error(`  [provision] ERROR pre-configuring app: ${err.message}`);
         // Leave setup_complete=0 so the wizard fallback still works

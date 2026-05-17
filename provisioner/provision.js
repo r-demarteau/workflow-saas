@@ -388,6 +388,10 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           ]), { stdio: 'inherit' });
           wpInstalled = true;
           console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
+          // Set pretty permalinks so Apache routes /wp-json/ to index.php.
+          // Without this the REST API returns 404 — Application Password auth fails.
+          execFileSync('docker', wpCli(['rewrite', 'structure', '/%postname%/', '--hard']), { stdio: 'inherit' });
+          console.log('  [provision] permalink structure set');
           break;
         } catch (err) {
           if (attempt === 30) throw new Error(`wp core install failed after 30 attempts: ${err.message}`);

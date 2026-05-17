@@ -232,6 +232,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   console.log(`  [provision] magic token seeded (seeded=${seeded})`);
 
   // 5. Provision WordPress if requested
+  let wpInstalled = false;
   if (wordpress && wpPort) {
     const wpDbName = `wp_${slug.replace(/-/g, '_')}`;
     const wpDbUser = wpDbName;
@@ -274,6 +275,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     // Auto-install WordPress headlessly so the install wizard is never exposed.
     // Uses the official wordpress:cli image sharing the same named volume.
     // execFileSync avoids shell interpretation — passwords are passed as discrete args.
+    // Non-fatal: a WP-CLI failure is logged but must not block the welcome email.
     const wpVol     = `${slug}_wp_data`;
     const wpNetwork = `${slug}_internal`;
     const wpCliArgs = (wpArgs) => [
@@ -284,41 +286,51 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       ...wpArgs,
     ];
 
-    // Wait for wp-config.php to appear (WordPress entrypoint generates it on first start)
-    console.log('  [provision] waiting for WordPress to initialize...');
-    for (let attempt = 1; attempt <= 60; attempt++) {
-      try {
-        execFileSync('docker', wpCliArgs(['wp', 'config', 'path']), { stdio: 'ignore' });
-        console.log('  [provision] WordPress config ready');
-        break;
-      } catch {
-        if (attempt === 60) throw new Error(`WordPress never initialized for tenant ${slug}`);
-        execSync('sleep 3');
+    try {
+      // Wait for wp-config.php to appear (WordPress entrypoint generates it on first start)
+      console.log('  [provision] waiting for WordPress to initialize...');
+      let configReady = false;
+      for (let attempt = 1; attempt <= 60; attempt++) {
+        try {
+          execFileSync('docker', wpCliArgs(['wp', 'config', 'path']), { stdio: 'ignore' });
+          configReady = true;
+          console.log('  [provision] WordPress config ready');
+          break;
+        } catch {
+          if (attempt === 60) throw new Error('wp-config.php never appeared');
+          execSync('sleep 3');
+        }
       }
+
+      if (configReady) {
+        // Run headless core install — retries handle the brief window while the DB initializes
+        console.log('  [provision] installing WordPress core...');
+        for (let attempt = 1; attempt <= 10; attempt++) {
+          try {
+            execFileSync('docker', wpCliArgs([
+              'wp', 'core', 'install',
+              `--url=${wpUrl}`,
+              `--title=${slug} WooCommerce Store`,
+              `--admin_user=${wpAdminUser}`,
+              `--admin_password=${wpAdminPass}`,
+              `--admin_email=${email}`,
+              '--skip-email',
+            ]), { stdio: 'inherit' });
+            wpInstalled = true;
+            console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
+            break;
+          } catch {
+            if (attempt === 10) throw new Error('wp core install failed after 10 attempts');
+            execSync('sleep 5');
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`  [provision] WARNING: WordPress auto-install failed for ${slug}: ${err.message}`);
+      console.error('  [provision] The install wizard will be accessible — tenant must install manually.');
     }
 
-    // Run headless core install — retries handle the brief window while the DB initializes
-    console.log('  [provision] installing WordPress core...');
-    for (let attempt = 1; attempt <= 10; attempt++) {
-      try {
-        execFileSync('docker', wpCliArgs([
-          'wp', 'core', 'install',
-          `--url=${wpUrl}`,
-          `--title=${slug} WooCommerce Store`,
-          `--admin_user=${wpAdminUser}`,
-          `--admin_password=${wpAdminPass}`,
-          `--admin_email=${email}`,
-          '--skip-email',
-        ]), { stdio: 'inherit' });
-        console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
-        break;
-      } catch {
-        if (attempt === 10) throw new Error(`WordPress core install failed for tenant ${slug}`);
-        execSync('sleep 5');
-      }
-    }
-
-    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort})`);
+    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}`);
   }
 
   // 6. Send welcome email — the raw token goes in the URL, not the hash
@@ -327,7 +339,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     slug,
     domain: DOMAIN,
     setupToken,
-    ...(wordpress && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass }),
+    ...(wpInstalled && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass }),
   });
 
   return { port };

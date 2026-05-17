@@ -287,42 +287,62 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     ];
 
     try {
-      // Wait for wp-config.php to appear (WordPress entrypoint generates it on first start)
-      console.log('  [provision] waiting for WordPress to initialize...');
-      let configReady = false;
+      // Wait for WordPress core files to land on the shared volume.
+      // Use --entrypoint ls so we never trigger a WP bootstrap (which would fail
+      // because the auto-generated wp-config.php has DB_HOST='mysql').
+      console.log('  [provision] waiting for WordPress files to land on volume...');
       for (let attempt = 1; attempt <= 60; attempt++) {
         try {
-          execFileSync('docker', wpCliArgs(['wp', 'config', 'path']), { stdio: 'ignore' });
-          configReady = true;
-          console.log('  [provision] WordPress config ready');
+          execFileSync('docker', [
+            'run', '--rm',
+            '--entrypoint', 'ls',
+            '-v', `${wpVol}:/var/www/html`,
+            'wordpress:cli',
+            '/var/www/html/wp-includes/version.php',
+          ], { stdio: 'ignore' });
+          console.log('  [provision] WordPress files ready');
           break;
         } catch {
-          if (attempt === 60) throw new Error('wp-config.php never appeared');
+          if (attempt === 60) throw new Error('WordPress files never landed on volume');
           execSync('sleep 3');
         }
       }
 
-      if (configReady) {
-        // Run headless core install — retries handle the brief window while the DB initializes
-        console.log('  [provision] installing WordPress core...');
-        for (let attempt = 1; attempt <= 10; attempt++) {
-          try {
-            execFileSync('docker', wpCliArgs([
-              'wp', 'core', 'install',
-              `--url=${wpUrl}`,
-              `--title=${slug} WooCommerce Store`,
-              `--admin_user=${wpAdminUser}`,
-              `--admin_password=${wpAdminPass}`,
-              `--admin_email=${email}`,
-              '--skip-email',
-            ]), { stdio: 'inherit' });
-            wpInstalled = true;
-            console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
-            break;
-          } catch {
-            if (attempt === 10) throw new Error('wp core install failed after 10 attempts');
-            execSync('sleep 5');
-          }
+      // Write a correct wp-config.php ourselves — the WordPress container's entrypoint
+      // generates one with DB_HOST='mysql' (its hardcoded default) which WP-CLI cannot
+      // use to reach our container-named DB host.  --force overwrites it; --skip-check
+      // skips the DB connection test so this succeeds even before MariaDB accepts connections.
+      console.log('  [provision] writing correct wp-config.php...');
+      execFileSync('docker', wpCliArgs([
+        'wp', 'config', 'create',
+        '--force',
+        '--skip-check',
+        `--dbname=${wpDbName}`,
+        `--dbuser=${wpDbUser}`,
+        `--dbpass=${wpDbPass}`,
+        `--dbhost=${slug}-db-1`,
+        `--extra-php=define('WP_HOME','${wpUrl}');define('WP_SITEURL','${wpUrl}');`,
+      ]), { stdio: 'inherit' });
+
+      // Run headless core install — retries handle the brief window while MariaDB finishes init.
+      console.log('  [provision] installing WordPress core...');
+      for (let attempt = 1; attempt <= 30; attempt++) {
+        try {
+          execFileSync('docker', wpCliArgs([
+            'wp', 'core', 'install',
+            `--url=${wpUrl}`,
+            `--title=${slug} WooCommerce Store`,
+            `--admin_user=${wpAdminUser}`,
+            `--admin_password=${wpAdminPass}`,
+            `--admin_email=${email}`,
+            '--skip-email',
+          ]), { stdio: 'inherit' });
+          wpInstalled = true;
+          console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
+          break;
+        } catch {
+          if (attempt === 30) throw new Error('wp core install failed after 30 attempts');
+          execSync('sleep 5');
         }
       }
     } catch (err) {

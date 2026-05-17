@@ -210,7 +210,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   // The password never appears in the host process list — it comes from the
   // container's own MYSQL_ROOT_PASSWORD env var, and SQL is piped via stdin.
   // Wait for migration 011 (setup_complete column) — not just the table — before seeding.
-  const checkTableSql = `SELECT 1 FROM information_schema.columns WHERE table_schema=${mysql.escape(dbName)} AND table_name='settings' AND column_name='magic_token' LIMIT 1;`;
+  // SELECT the column directly — mariadb exits non-zero with "Unknown column" if
+  // migration 011 hasn't run yet, and exits 0 (success) once it exists.
+  const checkTableSql = `SELECT magic_token FROM settings WHERE 1=0;`;
 
   const sql = [
     `INSERT INTO settings (id, config, magic_token, magic_token_exp, admin_email, wordpress, wp_url)`,
@@ -243,6 +245,8 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   // 5. Provision WordPress if requested
   let wpInstalled = false;
   let wcInstalled = false;
+  let wcApiKey    = null;
+  let wcApiSecret = null;
   if (wordpress && wpPort) {
     const wpDbName = `wp_${slug.replace(/-/g, '_')}`;
     const wpDbUser = wpDbName;
@@ -411,8 +415,6 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
 
     // Step E: generate WooCommerce REST API keys and pre-configure the tenant app.
     // Uses wp eval-file via the shared volume so no shell quoting issues.
-    let wcApiKey    = null;
-    let wcApiSecret = null;
     if (wcInstalled) {
       try {
         console.log('  [provision] generating WooCommerce API keys...');

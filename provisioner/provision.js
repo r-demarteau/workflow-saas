@@ -286,18 +286,19 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     // Non-fatal: a WP-CLI failure is logged but must not block the welcome email.
     const wpVol     = `${slug}_wp_data`;
     const wpNetwork = `${slug}_internal`;
-    const wpCliArgs = (wpArgs) => [
-      'run', '--rm', '-u', 'www-data',
+    // Run as root — the wordpress:cli entrypoint automatically su's to www-data,
+    // which is more reliable than -u www-data (avoids HOME/cache dir permission issues).
+    const wpCli = (wpArgs) => [
+      'run', '--rm',
       '--network', wpNetwork,
       '-v', `${wpVol}:/var/www/html`,
       'wordpress:cli',
+      'wp', '--path=/var/www/html',
       ...wpArgs,
     ];
 
+    // Step A: wait for WordPress files
     try {
-      // Wait for WordPress core files to land on the shared volume.
-      // Use --entrypoint ls so we never trigger a WP bootstrap (which would fail
-      // because the auto-generated wp-config.php has DB_HOST='mysql').
       console.log('  [provision] waiting for WordPress files to land on volume...');
       for (let attempt = 1; attempt <= 60; attempt++) {
         try {
@@ -315,31 +316,35 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           execSync('sleep 3');
         }
       }
+    } catch (err) {
+      console.error(`  [provision] ERROR waiting for WP files: ${err.message}`);
+    }
 
-      // Write a correct wp-config.php ourselves — the WordPress container's entrypoint
-      // generates one with DB_HOST='mysql' (its hardcoded default) which WP-CLI cannot
-      // use to reach our container-named DB host.  --force overwrites it; --skip-check
-      // skips the DB connection test so this succeeds even before MariaDB accepts connections.
+    // Step B: write correct wp-config.php
+    try {
       console.log('  [provision] writing correct wp-config.php...');
-      execFileSync('docker', wpCliArgs([
-        'wp', 'config', 'create',
+      execFileSync('docker', wpCli([
+        'config', 'create',
         '--force',
         '--skip-check',
         `--dbname=${wpDbName}`,
         `--dbuser=${wpDbUser}`,
         `--dbpass=${wpDbPass}`,
         `--dbhost=${slug}-db-1`,
-        // COOKIEPATH='/' ensures login cookies are sent for /wp/wp-admin/ and any
-        // other path, preventing the logout loop caused by a /wp/ scoped cookie.
         `--extra-php=define('WP_HOME','${wpUrl}');define('WP_SITEURL','${wpUrl}');define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');`,
       ]), { stdio: 'inherit' });
+      console.log('  [provision] wp-config.php written');
+    } catch (err) {
+      console.error(`  [provision] ERROR writing wp-config.php: ${err.message}`);
+    }
 
-      // Run headless core install — retries handle the brief window while MariaDB finishes init.
+    // Step C: wp core install (retries until MariaDB is ready)
+    try {
       console.log('  [provision] installing WordPress core...');
       for (let attempt = 1; attempt <= 30; attempt++) {
         try {
-          execFileSync('docker', wpCliArgs([
-            'wp', 'core', 'install',
+          execFileSync('docker', wpCli([
+            'core', 'install',
             `--url=${wpUrl}`,
             `--title=${slug} WooCommerce Store`,
             `--admin_user=${wpAdminUser}`,
@@ -355,22 +360,22 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           execSync('sleep 5');
         }
       }
-
-      // Install and activate WooCommerce, run DB migrations, then create shop pages.
-      // --user=1 is the numeric admin user ID — wc subcommands require an integer user.
-      // wp wc update runs WooCommerce's DB setup routines so that wc tool subcommands
-      // (like install_pages) are registered; without it they report as unknown commands.
-      console.log('  [provision] installing WooCommerce...');
-      execFileSync('docker', wpCliArgs(['wp', 'plugin', 'install', 'woocommerce', '--activate']), { stdio: 'inherit' });
-      console.log('  [provision] running WooCommerce DB setup...');
-      execFileSync('docker', wpCliArgs(['wp', 'wc', 'update', '--user=1']), { stdio: 'inherit' });
-      console.log('  [provision] creating WooCommerce shop pages...');
-      execFileSync('docker', wpCliArgs(['wp', 'wc', 'tool', 'run', 'install_pages', '--user=1']), { stdio: 'inherit' });
-      wcInstalled = true;
-      console.log('  [provision] WooCommerce installed and shop pages created');
     } catch (err) {
-      console.error(`  [provision] WARNING: WordPress auto-install failed for ${slug}: ${err.message}`);
-      console.error('  [provision] The install wizard will be accessible — tenant must install manually.');
+      console.error(`  [provision] ERROR installing WordPress core: ${err.message}`);
+    }
+
+    // Step D: install + activate WooCommerce, create shop pages
+    if (wpInstalled) {
+      try {
+        console.log('  [provision] installing WooCommerce plugin...');
+        execFileSync('docker', wpCli(['plugin', 'install', 'woocommerce', '--activate']), { stdio: 'inherit' });
+        console.log('  [provision] creating WooCommerce shop pages...');
+        execFileSync('docker', wpCli(['wc', 'tool', 'run', 'install_pages', '--user=1']), { stdio: 'inherit' });
+        wcInstalled = true;
+        console.log('  [provision] WooCommerce installed and shop pages created');
+      } catch (err) {
+        console.error(`  [provision] ERROR installing WooCommerce: ${err.message}`);
+      }
     }
 
     console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}, wc=${wcInstalled}`);

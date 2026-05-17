@@ -167,8 +167,10 @@
 		<div class="mt-16 max-w-3xl mx-auto">
 			<div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
 				<div class="flex flex-col md:flex-row items-start md:items-center gap-6 p-8">
-					<div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-2xl">
-						🌐
+					<div class="flex-shrink-0 w-12 h-12 rounded-xl bg-[#3c434a] flex items-center justify-center">
+						<svg viewBox="0 0 122.52 122.52" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 fill-white">
+							<path d="M8.71 61.26C8.71 82.11 20.6 100.18 38.03 109.3L13.73 44.9C10.6 49.8 8.71 55.32 8.71 61.26zm88.76-2.66c0-6.55-2.36-11.08-4.38-14.61-2.69-4.37-5.21-8.07-5.21-12.44 0-4.88 3.7-9.41 8.91-9.41.24 0 .46.03.69.04A52.46 52.46 0 0061.26 8.71c-18.97 0-35.65 9.74-45.39 24.47.78.02 1.52.04 2.15.04 3.5 0 8.91-.42 8.91-.42 1.8-.11 2.01 2.54.22 2.75 0 0-1.81.21-3.83.32L42.8 93.31l10.82-32.45-7.7-21.09c-1.8-.11-3.5-.32-3.5-.32-1.8-.1-1.6-2.86.21-2.75 0 0 5.52.42 8.81.42 3.5 0 8.92-.42 8.92-.42 1.8-.11 2.02 2.54.21 2.75 0 0-1.81.21-3.83.32l19.36 57.59 5.35-17.86c2.32-7.41 4.08-12.73 4.08-17.31zM62.24 65.5L46.17 112.2a52.54 52.54 0 0015.09 2.19c6.22 0 12.19-1.08 17.73-3.04-.14-.23-.27-.47-.38-.73zm46.4-30.62c.24 1.76.37 3.65.37 5.69 0 5.62-1.05 11.93-4.2 19.83l-16.88 48.83C103.6 99.75 113.81 81.67 113.81 61.26c0-9.35-2.38-18.14-6.56-25.8l1.39-.58z"/>
+						</svg>
 					</div>
 					<div class="flex-1">
 						<div class="flex items-center gap-3 flex-wrap">

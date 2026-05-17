@@ -70,6 +70,12 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
       </div>
 
       <p class="expiry">⏰ This activation link is valid for 14 days. If it expires, visit your workspace and click "Resend activation link".</p>
+
+      <div class="info-box" style="margin-top:24px;">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">📌 Bookmark your login page</p>
+        <p style="margin:0;font-size:14px;color:#374151;">After setup, you can always log in at:</p>
+        <a href="${workspaceUrl}/login" style="color:#2438ec;font-weight:600;word-break:break-all;">${workspaceUrl}/login</a>
+      </div>
     </div>
     <div class="footer">
       <p>Teamdock · Questions? Reply to this email or contact support@${domain}</p>
@@ -78,7 +84,7 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
 </body>
 </html>
     `,
-    text: `Your Teamdock workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}\n\nWhat happens next:\n1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!\n\nWorkspace URL: ${workspaceUrl}`
+    text: `Your Teamdock workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}\n\nWhat happens next:\n1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!\n\nBookmark your login page: ${workspaceUrl}/login`
   });
 
   console.log(`[email] Welcome email sent to ${email}`);

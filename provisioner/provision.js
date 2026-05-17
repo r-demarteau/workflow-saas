@@ -294,10 +294,16 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     const wpNetwork = `${slug}_internal`;
     // Run as root — the wordpress:cli entrypoint automatically su's to www-data,
     // which is more reliable than -u www-data (avoids HOME/cache dir permission issues).
+    // Newer WordPress images use getenv_docker() in wp-config.php instead of hardcoded
+    // values, so credentials must be passed as env vars — not just present in wp-config.
     const wpCli = (wpArgs) => [
       'run', '--rm',
       '--network', wpNetwork,
       '-v', `${wpVol}:/var/www/html`,
+      '-e', `WORDPRESS_DB_NAME=${wpDbName}`,
+      '-e', `WORDPRESS_DB_USER=${wpDbUser}`,
+      '-e', `WORDPRESS_DB_PASSWORD=${wpDbPass}`,
+      '-e', `WORDPRESS_DB_HOST=${slug}-db-1`,
       'wordpress:cli',
       'wp', '--path=/var/www/html',
       ...wpArgs,

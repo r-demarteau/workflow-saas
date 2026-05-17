@@ -28,8 +28,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      - internal
-      - teamdock-shared
+      internal:
+        priority: 100
+      teamdock-shared:
+        priority: 10
 
   db:
     image: mariadb:11.4
@@ -52,6 +54,7 @@ services:
       retries: 10
     networks:
       - internal
+      - teamdock-shared
 
 volumes:
   db_data:

@@ -336,8 +336,8 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         `<?php`,
         `$f = '/var/www/html/wp-config.php';`,
         `$c = file_get_contents($f);`,
-        // Match define(...DB_HOST...) regardless of quote style or whitespace
-        `$c = preg_replace('/define[^)]*DB_HOST[^)]*\\)/', "define( 'DB_HOST', '${slug}-db-1' )", $c);`,
+        // Match the full define('DB_HOST', ...) statement including the closing );
+        `$c = preg_replace('/define[^)]*DB_HOST[^)]*\\)[^;]*;/', "define( 'DB_HOST', '${slug}-db-1' );", $c);`,
         // Append COOKIEPATH defines before the stop-editing comment if not present
         `if (strpos($c, 'COOKIEPATH') === false) {`,
         `  $extra = "define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');" . PHP_EOL;`,

@@ -52,7 +52,8 @@ function runSql(dbContainer, dbName, sql) {
   console.log(`  $ docker exec -i ${dbContainer} mariadb [sql via stdin]`);
   // $MYSQL_ROOT_PASSWORD is already set in the container's environment (.env.secrets).
   // Using it here means the password never appears in the host process list.
-  const cmd = `docker exec -i ${dbContainer} sh -c 'mariadb -u root -p"$MYSQL_ROOT_PASSWORD" "${dbName}"'`;
+  // --batch --exit-on-error ensures the CLI exits non-zero on SQL errors so execSync throws.
+  const cmd = `docker exec -i ${dbContainer} sh -c 'mariadb --batch --exit-on-error -u root -p"$MYSQL_ROOT_PASSWORD" "${dbName}"'`;
   execSync(cmd, { input: sql + '\n', encoding: 'utf8', stdio: ['pipe', 'inherit', 'inherit'] });
 }
 
@@ -118,7 +119,29 @@ async function provisionTenant({ slug, plan, email }) {
 
   fs.writeFileSync(path.join(tenantDir, '.env.secrets'), secrets, { mode: 0o600 });
 
-  // 3. Start only the DB first so we can fix auth before the app connects.
+  // 3. Register the nginx vhost immediately so the subdomain is live right away.
+  // While the app container is still starting, nginx serves setup-pending.html (via
+  // proxy_intercept_errors + error_page 502) so users see a branded loading page
+  // instead of the browser's generic "connection refused" or the marketing site.
+  const nginxTemplate = fs.readFileSync(
+    path.join(__dirname, 'templates', 'nginx.template.conf'), 'utf8'
+  );
+  const nginxConf = nginxTemplate
+    .replace(/\{\{SLUG\}\}/g,      slug)
+    .replace(/\{\{PORT\}\}/g,      String(port))
+    .replace(/\{\{DOMAIN\}\}/g,    DOMAIN)
+    .replace(/\{\{CERT_NAME\}\}/g, CERT_NAME);
+
+  const nginxFile = path.join(NGINX_DIR, `${slug}.${DOMAIN}.conf`);
+  fs.writeFileSync(nginxFile, nginxConf);
+
+  const enabledPath = `/etc/nginx/sites-enabled/${slug}.${DOMAIN}.conf`;
+  if (!fs.existsSync(enabledPath)) {
+    run(`ln -s ${nginxFile} ${enabledPath}`, '/');
+  }
+  run('nginx -s reload', '/');
+
+  // 4. Start only the DB first so we can fix auth before the app connects.
   run('docker compose up -d db', tenantDir);
 
   // 3a. Wait for DB to be healthy, then fix the nemo user's TCP auth.
@@ -126,7 +149,8 @@ async function provisionTenant({ slug, plan, email }) {
   // is sometimes not accepted by mysql2 over TCP. ALTER USER via the root socket
   // (docker exec) re-hashes it correctly before the app ever tries to connect.
   const dbContainer = `${slug}-db-1`;
-  const fixAuthSql = `ALTER USER ${mysql.escape(dbUser)}@'%' IDENTIFIED BY ${mysql.escape(dbPass)}; FLUSH PRIVILEGES;`;
+  // Force mysql_native_password explicitly — MariaDB 11.4 defaults to ed25519 which mysql2 can't authenticate.
+  const fixAuthSql = `ALTER USER ${mysql.escape(dbUser)}@'%' IDENTIFIED VIA mysql_native_password USING PASSWORD(${mysql.escape(dbPass)}); FLUSH PRIVILEGES;`;
   for (let attempt = 1; attempt <= 30; attempt++) {
     try {
       runSql(dbContainer, 'mysql', fixAuthSql);
@@ -173,27 +197,7 @@ async function provisionTenant({ slug, plan, email }) {
   }
   console.log(`  [provision] magic token seeded (seeded=${seeded})`);
 
-  // 4. Write nginx vhost
-  const nginxTemplate = fs.readFileSync(
-    path.join(__dirname, 'templates', 'nginx.template.conf'), 'utf8'
-  );
-  const nginxConf = nginxTemplate
-    .replace(/\{\{SLUG\}\}/g,      slug)
-    .replace(/\{\{PORT\}\}/g,      String(port))
-    .replace(/\{\{DOMAIN\}\}/g,    DOMAIN)
-    .replace(/\{\{CERT_NAME\}\}/g, CERT_NAME);
-
-  const nginxFile = path.join(NGINX_DIR, `${slug}.${DOMAIN}.conf`);
-  fs.writeFileSync(nginxFile, nginxConf);
-
-  // 5. Enable vhost + reload nginx
-  const enabledPath = `/etc/nginx/sites-enabled/${slug}.${DOMAIN}.conf`;
-  if (!fs.existsSync(enabledPath)) {
-    run(`ln -s ${nginxFile} ${enabledPath}`, '/');
-  }
-  run('nginx -s reload', '/');
-
-  // 6. Send welcome email — the raw token goes in the URL, not the hash
+  // 5. Send welcome email — the raw token goes in the URL, not the hash
   await sendWelcomeEmail({ email, slug, domain: DOMAIN, setupToken });
 
   return { port };

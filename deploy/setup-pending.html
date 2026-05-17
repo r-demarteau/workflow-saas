@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="10" />
+  <title>Setting up your workspace — Teamdock</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #111827;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 1rem;
+      padding: 3rem 2.5rem;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #4f46e5;
+      margin-bottom: 2rem;
+      text-decoration: none;
+    }
+    .logo svg { width: 28px; height: 28px; }
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.75rem;
+      width: 72px;
+      height: 72px;
+      background: #ede9fe;
+      border-radius: 50%;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 4px solid #c4b5fd;
+      border-top-color: #4f46e5;
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .5rem; }
+    .sub {
+      color: #6b7280;
+      font-size: .9375rem;
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+    .steps {
+      text-align: left;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: .875rem;
+      margin-bottom: 2rem;
+    }
+    .steps li { display: flex; align-items: flex-start; gap: .75rem; }
+    .step-num {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #4f46e5;
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 1px;
+    }
+    .steps li span { font-size: .875rem; color: #374151; line-height: 1.5; }
+    .refresh-note {
+      font-size: .8rem;
+      color: #9ca3af;
+    }
+    .refresh-note a { color: #4f46e5; text-decoration: none; }
+    .refresh-note a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <a class="logo" href="https://teamdock.ai">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#4f46e5"/>
+        <path d="M8 10h16M8 16h10M8 22h13" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      Teamdock
+    </a>
+
+    <div class="spinner-wrap"><div class="spinner"></div></div>
+
+    <h1>Setting up your workspace&hellip;</h1>
+    <p class="sub">
+      We're provisioning your isolated environment.<br>
+      This usually takes under a minute.
+    </p>
+
+    <ul class="steps">
+      <li><div class="step-num">1</div><span>Spinning up your private database and server.</span></li>
+      <li><div class="step-num">2</div><span>Running database migrations.</span></li>
+      <li><div class="step-num">3</div><span>Sending your setup email with the activation link.</span></li>
+    </ul>
+
+    <p class="refresh-note">
+      This page refreshes automatically every 10 seconds.<br>
+      Need help? <a href="mailto:support@teamdock.ai">Contact support</a>
+    </p>
+  </div>
+</body>
+</html>

@@ -12,7 +12,7 @@ TENANTS_DIR="/opt/teamdock/tenants"
 NGINX_SITES="/etc/nginx/sites-available"
 
 echo "==> Creating directories..."
-mkdir -p "$TENANTS_DIR" "$NGINX_SITES" /etc/nginx/sites-enabled
+mkdir -p "$TENANTS_DIR" "$NGINX_SITES" /etc/nginx/sites-enabled /opt/teamdock
 
 # ── 1. Pull latest code ───────────────────────────────────────────────────────
 echo "==> Pulling latest code..."
@@ -65,6 +65,7 @@ echo "==> Configuring nginx..."
 cp "$REPO_DIR/deploy/nginx-teamdock.conf" "$NGINX_SITES/teamdock.com.conf"
 ln -sf "$NGINX_SITES/teamdock.com.conf" /etc/nginx/sites-enabled/teamdock.com.conf
 
+cp "$REPO_DIR/deploy/setup-pending.html" /opt/teamdock/setup-pending.html
 nginx -t && nginx -s reload
 echo "✅ nginx configured and reloaded"
 

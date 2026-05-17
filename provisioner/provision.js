@@ -255,8 +255,12 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     ].join(' ');
     runSql(dbContainer, 'mysql', createWpDb);
 
-    // Write WordPress secrets (DB creds + generated admin account)
+    // Write WordPress secrets (DB creds + generated admin account).
+    // WORDPRESS_DB_HOST is also written here so the WordPress entrypoint reliably
+    // picks it up — the environment: section in docker-compose is sometimes ignored
+    // in favour of env_file when both are present.
     const wpSecrets = [
+      `WORDPRESS_DB_HOST=${slug}-db-1`,
       `WORDPRESS_DB_PASSWORD=${wpDbPass}`,
       `WORDPRESS_TABLE_PREFIX=wp_`,
       `WP_ADMIN_USER=${wpAdminUser}`,
@@ -322,20 +326,21 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           execSync('sleep 3');
         }
       }
-      // Fix DB_HOST (replaces 'mysql' default with the actual container name)
-      execFileSync('docker', [
-        'exec', wpContainer,
-        'sed', '-i',
-        `s/define( 'DB_HOST', 'mysql' )/define( 'DB_HOST', '${slug}-db-1' )/`,
-        '/var/www/html/wp-config.php',
-      ], { stdio: 'inherit' });
-      // COOKIEPATH defines — prevents admin logout loop caused by /wp/ scoped cookies.
-      // Append before the "stop editing" comment so WP picks them up on every request.
-      execFileSync('docker', [
-        'exec', wpContainer,
-        'bash', '-c',
-        `grep -q COOKIEPATH /var/www/html/wp-config.php || sed -i "/That's all, stop editing/i define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');" /var/www/html/wp-config.php`,
-      ], { stdio: 'inherit' });
+      // Use PHP (always available in wordpress:latest) to patch wp-config.php —
+      // more robust than sed because it handles any quote style (single or double)
+      // and any whitespace variation the WordPress entrypoint might produce.
+      const phpPatch = [
+        `$f='/var/www/html/wp-config.php';`,
+        `$c=file_get_contents($f);`,
+        // Fix DB_HOST regardless of quote style or spacing
+        `$c=preg_replace("/define\\s*\\([\\s'\\"]*DB_HOST[\\s'\\"]*,[\\s'\"]*[^'\"]*['\\"]/","define( 'DB_HOST', '${slug}-db-1'",$c);`,
+        // Add COOKIEPATH defines before the stop-editing comment if not present
+        `if(strpos($c,'COOKIEPATH')===false){$c=str_replace("/* That's all",\"define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');\n/* That's all\",$c);}`,
+        `file_put_contents($f,$c);`,
+        // Log the resulting DB_HOST line so we can verify in PM2 logs
+        `preg_match("/define[^;]*DB_HOST[^;]*;/",$c,$m);echo isset($m[0])?$m[0]:'DB_HOST not found';echo "\\n";`,
+      ].join('');
+      execFileSync('docker', ['exec', wpContainer, 'php', '-r', phpPatch], { stdio: 'inherit' });
       console.log('  [provision] wp-config.php patched');
     } catch (err) {
       console.error(`  [provision] ERROR patching wp-config.php: ${err.message}`);

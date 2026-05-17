@@ -356,11 +356,16 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         }
       }
 
-      // Install and activate WooCommerce, then create shop pages.
-      // Non-fatal: a failure here is logged but won't block the welcome email.
+      // Install and activate WooCommerce, run DB migrations, then create shop pages.
+      // --user=1 is the numeric admin user ID — wc subcommands require an integer user.
+      // wp wc update runs WooCommerce's DB setup routines so that wc tool subcommands
+      // (like install_pages) are registered; without it they report as unknown commands.
       console.log('  [provision] installing WooCommerce...');
       execFileSync('docker', wpCliArgs(['wp', 'plugin', 'install', 'woocommerce', '--activate']), { stdio: 'inherit' });
-      execFileSync('docker', wpCliArgs(['wp', 'wc', 'tool', 'run', 'install_pages', `--user=${wpAdminUser}`]), { stdio: 'inherit' });
+      console.log('  [provision] running WooCommerce DB setup...');
+      execFileSync('docker', wpCliArgs(['wp', 'wc', 'update', '--user=1']), { stdio: 'inherit' });
+      console.log('  [provision] creating WooCommerce shop pages...');
+      execFileSync('docker', wpCliArgs(['wp', 'wc', 'tool', 'run', 'install_pages', '--user=1']), { stdio: 'inherit' });
       wcInstalled = true;
       console.log('  [provision] WooCommerce installed and shop pages created');
     } catch (err) {

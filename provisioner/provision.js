@@ -66,7 +66,7 @@ async function provisionTenant({ slug, plan, email }) {
   }
 
   const port          = nextPort();
-  const dbName        = `nemo_${slug.replace(/-/g, '_')}`;
+  const dbName        = `teamdock_${slug.replace(/-/g, '_')}`;
   const dbUser        = dbName;
   const dbPass               = randomString(24);
   const dbRootPass           = randomString(24);
@@ -143,7 +143,7 @@ async function provisionTenant({ slug, plan, email }) {
   // 4. Start only the DB first so we can fix auth before the app connects.
   run('docker compose up -d db', tenantDir);
 
-  // 3a. Wait for DB to be healthy, then fix the nemo user's TCP auth.
+  // 3a. Wait for DB to be healthy, then fix the teamdock user's TCP auth.
   // MariaDB Docker init creates the user via socket; the password hash it stores
   // is sometimes not accepted by mysql2 over TCP. ALTER USER via the root socket
   // (docker exec) re-hashes it correctly before the app ever tries to connect.

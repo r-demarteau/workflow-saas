@@ -118,16 +118,34 @@ async function provisionTenant({ slug, plan, email }) {
 
   fs.writeFileSync(path.join(tenantDir, '.env.secrets'), secrets, { mode: 0o600 });
 
-  // 3. Start the stack
+  // 3. Start only the DB first so we can fix auth before the app connects.
+  run('docker compose up -d db', tenantDir);
+
+  // 3a. Wait for DB to be healthy, then fix the nemo user's TCP auth.
+  // MariaDB Docker init creates the user via socket; the password hash it stores
+  // is sometimes not accepted by mysql2 over TCP. ALTER USER via the root socket
+  // (docker exec) re-hashes it correctly before the app ever tries to connect.
+  const dbContainer = `${slug}-db-1`;
+  const fixAuthSql = `ALTER USER ${mysql.escape(dbUser)}@'%' IDENTIFIED BY ${mysql.escape(dbPass)}; FLUSH PRIVILEGES;`;
+  for (let attempt = 1; attempt <= 30; attempt++) {
+    try {
+      runSql(dbContainer, 'mysql', fixAuthSql);
+      console.log('  [provision] DB user auth fixed');
+      break;
+    } catch {
+      if (attempt === 30) throw new Error(`DB never became ready for auth fix: ${slug}`);
+      execSync('sleep 2');
+    }
+  }
+
+  // 3b. Now start the full stack (app can connect because auth is already fixed).
   run('docker compose up -d', tenantDir);
 
-  // 3b. Wait for the app to finish running migrations (settings table must exist),
+  // 3c. Wait for the app to finish running migrations (settings table must exist),
   // then seed the hashed magic token + admin email.
   // Uses 90 attempts × 3s = 4.5 min max — enough for a cold image start + migrations.
   // The password never appears in the host process list — it comes from the
   // container's own MYSQL_ROOT_PASSWORD env var, and SQL is piped via stdin.
-  const dbContainer = `${slug}-db-1`;
-
   const checkTableSql = `SELECT 1 FROM information_schema.tables WHERE table_schema=${mysql.escape(dbName)} AND table_name='settings' LIMIT 1;`;
 
   const sql = [

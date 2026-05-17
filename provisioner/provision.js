@@ -457,7 +457,24 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       }
     }
 
-    // Step F: if we have keys, encrypt and pre-seed into the tenant app — skip setup wizard.
+    // Step F: generate a WordPress Application Password for Teamdock login.
+    // Regular WP admin passwords are not accepted — the app authenticates via
+    // the WP REST API which requires an Application Password.
+    let wpAppPassword = null;
+    if (wcApiKey && wcApiSecret) {
+      try {
+        console.log('  [provision] generating WordPress Application Password...');
+        const out = execFileSync('docker', wpCli([
+          'user', 'application-password', 'create', '1', 'Teamdock', '--porcelain',
+        ]), { encoding: 'utf8' });
+        wpAppPassword = out.trim();
+        console.log('  [provision] Application Password generated');
+      } catch (err) {
+        console.error(`  [provision] ERROR generating Application Password: ${err.message}`);
+      }
+    }
+
+    // Step G: if we have keys, encrypt and pre-seed into the tenant app — skip setup wizard.
     if (wcApiKey && wcApiSecret) {
       try {
         const config = JSON.stringify({
@@ -475,21 +492,22 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       }
     }
 
-    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}, wc=${wcInstalled}, autoConfigured=${!!wcApiKey}`);
+    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}, wc=${wcInstalled}, autoConfigured=${!!wcApiKey}, appPassword=${!!wpAppPassword}`);
   }
 
   // 6. Send welcome email.
   // WP package with full auto-config → direct login email (no wizard link).
   // Everything else (BYO WooCommerce, or WP where auto-config failed) → setup wizard email.
-  const wpFullyReady = !!(wordpress && wpPort && wcApiKey);
+  const wpFullyReady = !!(wordpress && wpPort && wcApiKey && wpAppPassword);
   if (wpFullyReady) {
     await sendWelcomeEmailReady({
       email,
       slug,
-      domain:      DOMAIN,
-      wpAdminUrl:  `${wpUrl}/wp-admin`,
+      domain:       DOMAIN,
+      wpAdminUrl:   `${wpUrl}/wp-admin`,
       wpAdminUser,
       wpAdminPass,
+      wpAppPassword,
     });
   } else {
     await sendWelcomeEmailSetup({

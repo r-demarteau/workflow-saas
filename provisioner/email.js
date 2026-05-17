@@ -34,7 +34,7 @@ const CSS = `
 `;
 
 // ── Email 1: WooCommerce package — fully automated, direct login ──────────────
-async function sendWelcomeEmailReady({ email, slug, domain, wpAdminUrl, wpAdminUser, wpAdminPass }) {
+async function sendWelcomeEmailReady({ email, slug, domain, wpAdminUrl, wpAdminUser, wpAdminPass, wpAppPassword }) {
   const workspaceUrl = `https://${slug}.${domain}`;
   const loginUrl     = `${workspaceUrl}/login`;
 
@@ -58,13 +58,14 @@ async function sendWelcomeEmailReady({ email, slug, domain, wpAdminUrl, wpAdminU
     <a href="${loginUrl}" class="btn">Open my workspace →</a>
 
     <div class="box box-blue" style="margin-top:16px;">
-      <p class="label label-blue">Your login</p>
+      <p class="label label-blue">Your Teamdock login</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#374151;">Teamdock uses WordPress Application Passwords for authentication. Use the credentials below — <strong>not</strong> your regular WordPress password.</p>
       <table class="creds">
         <tr><td>URL</td><td><a href="${loginUrl}" style="color:#2438ec;">${loginUrl}</a></td></tr>
         <tr><td>Username</td><td>${wpAdminUser}</td></tr>
-        <tr><td>Password</td><td>${wpAdminPass}</td></tr>
+        <tr><td>App Password</td><td style="font-family:monospace;letter-spacing:.05em;">${wpAppPassword}</td></tr>
       </table>
-      <p style="margin:12px 0 0;font-size:12px;color:#6b7280;">⚠️ Change your password after first login.</p>
+      <p style="margin:12px 0 0;font-size:12px;color:#6b7280;">This is a generated Application Password — save it somewhere safe. You can create more in WP Admin → Profile → Application Passwords.</p>
     </div>
 
     <div class="box box-grey">
@@ -75,6 +76,7 @@ async function sendWelcomeEmailReady({ email, slug, domain, wpAdminUrl, wpAdminU
         <tr><td>Username</td><td>${wpAdminUser}</td></tr>
         <tr><td>Password</td><td>${wpAdminPass}</td></tr>
       </table>
+      <p style="margin:12px 0 0;font-size:12px;color:#6b7280;">⚠️ Change this password after your first login.</p>
     </div>
 
     <div class="box box-grey">
@@ -85,7 +87,7 @@ async function sendWelcomeEmailReady({ email, slug, domain, wpAdminUrl, wpAdminU
   <div class="footer"><p>Teamdock · Questions? Reply to this email or contact support@${domain}</p></div>
 </div>
 </body></html>`,
-    text: `Your WooCommerce store is live on Teamdock!\n\nLog in at: ${loginUrl}\nUsername: ${wpAdminUser}\nPassword: ${wpAdminPass}\n\nWordPress admin: ${wpAdminUrl}\n(Same credentials — change your password after first login)\n\nYour WooCommerce store is already connected and syncing.`,
+    text: `Your WooCommerce store is live on Teamdock!\n\nLog in at: ${loginUrl}\nUsername: ${wpAdminUser}\nApplication Password: ${wpAppPassword}\n(Use this — not your regular WordPress password)\n\nWordPress admin: ${wpAdminUrl}\nUsername: ${wpAdminUser}\nPassword: ${wpAdminPass}\n(Change this after first login)\n\nYour WooCommerce store is already connected and syncing.`,
   });
 
   console.log(`[email] Ready email sent to ${email}`);

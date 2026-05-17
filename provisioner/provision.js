@@ -334,7 +334,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       console.log('  [provision] waiting for wp-config.php...');
       for (let attempt = 1; attempt <= 60; attempt++) {
         try {
-          execFileSync('docker', ['exec', wpContainer, 'test', '-f', '/var/www/html/wp-config.php'], { stdio: 'ignore' });
+          // grep -q ensures DB_HOST is present (file fully written), not just that the file exists.
+          // test -f passes while WordPress is still writing the file, causing null bytes on read.
+          execFileSync('docker', ['exec', wpContainer, 'grep', '-q', 'DB_HOST', '/var/www/html/wp-config.php'], { stdio: 'ignore' });
           console.log('  [provision] wp-config.php ready');
           break;
         } catch (err) {
@@ -410,7 +412,10 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
             '</IfModule>',
             '# END WordPress',
           ].join('\n');
-          execFileSync('docker', ['exec', wpContainer, 'bash', '-c', `printf '%s\\n' ${JSON.stringify(htaccess)} > /var/www/html/.htaccess`], { stdio: 'inherit' });
+          const htaccessLocal = `/tmp/htaccess-${slug}`;
+          fs.writeFileSync(htaccessLocal, htaccess + '\n');
+          execSync(`docker cp ${htaccessLocal} ${wpContainer}:/var/www/html/.htaccess`);
+          try { fs.unlinkSync(htaccessLocal); } catch {}
           execFileSync('docker', wpCli(['rewrite', 'structure', '/%postname%/']), { stdio: 'inherit' });
           console.log('  [provision] permalink structure set and .htaccess written');
           break;

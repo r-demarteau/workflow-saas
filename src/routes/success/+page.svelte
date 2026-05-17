@@ -1,8 +1,3 @@
-<svelte:head>
-	<title>Welcome to Teamdock</title>
-	<meta name="robots" content="noindex, nofollow" />
-</svelte:head>
-
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -28,7 +23,8 @@
 </script>
 
 <svelte:head>
-	<title>Welcome to Teamdock!</title>
+	<title>Welcome to Teamdock</title>
+	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="min-h-screen pt-28 pb-24 bg-gray-50 flex items-center justify-center">

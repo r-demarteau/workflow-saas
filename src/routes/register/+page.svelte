@@ -1,8 +1,3 @@
-<svelte:head>
-	<title>Register — Teamdock</title>
-	<meta name="robots" content="noindex, nofollow" />
-</svelte:head>
-
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -70,6 +65,7 @@
 
 <svelte:head>
 	<title>Register — Teamdock</title>
+	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="min-h-screen pt-28 pb-24 bg-gray-50">

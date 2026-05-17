@@ -1,3 +1,8 @@
+<svelte:head>
+	<title>Register — Teamdock</title>
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
+
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';

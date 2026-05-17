@@ -17,6 +17,7 @@
 		<div class="hidden md:flex items-center gap-8">
 			<a href="/#features" class="text-sm font-medium text-gray-600 hover:text-gray-900">Features</a>
 			<a href="/pricing" class="text-sm font-medium text-gray-600 hover:text-gray-900">Pricing</a>
+			<a href="/blog" class="text-sm font-medium text-gray-600 hover:text-gray-900">Blog</a>
 		</div>
 		<div class="flex items-center gap-3">
 			<a href="/pricing" class="btn-primary text-sm px-5 py-2.5">Get started</a>

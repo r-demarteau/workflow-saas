@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e278b"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2438ec"/>
+      <stop offset="100%" stop-color="#5c83fc"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative grid -->
+  <g opacity="0.06" stroke="#8eafff" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- Large decorative logo bars (right side) -->
+  <rect x="780" y="140" width="180" height="58" rx="12" fill="url(#bar)" opacity="0.18"/>
+  <rect x="780" y="218" width="290" height="58" rx="12" fill="url(#bar)" opacity="0.14"/>
+  <rect x="780" y="296" width="370" height="58" rx="12" fill="url(#bar)" opacity="0.10"/>
+  <rect x="780" y="374" width="290" height="58" rx="12" fill="url(#bar)" opacity="0.07"/>
+
+  <!-- Glow -->
+  <ellipse cx="950" cy="315" rx="280" ry="200" fill="#2438ec" opacity="0.12"/>
+
+  <!-- Logo mark (top left) -->
+  <rect x="60" y="58" width="48" height="15" rx="4" fill="white"/>
+  <rect x="60" y="81" width="76" height="15" rx="4" fill="#5c83fc"/>
+  <rect x="60" y="104" width="96" height="15" rx="4" fill="white"/>
+
+  <!-- Wordmark -->
+  <text x="174" y="109" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="34" font-weight="800" fill="white" letter-spacing="-0.5">team<tspan fill="#5c83fc">dock</tspan></text>
+
+  <!-- Divider -->
+  <rect x="60" y="148" width="56" height="4" rx="2" fill="url(#bar)"/>
+
+  <!-- Main headline -->
+  <text x="60" y="260" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" fill="white" letter-spacing="-1.5">WooCommerce operations</text>
+  <text x="60" y="332" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" letter-spacing="-1.5" fill="url(#bar)">for high-performing teams</text>
+
+  <!-- Subheadline -->
+  <text x="62" y="396" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="26" fill="#8eafff" font-weight="400" letter-spacing="0.2">Orders · Customers · Tickets · Live chat · AI assistant</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="558" width="1200" height="72" fill="#2438ec" opacity="0.22"/>
+  <rect x="0" y="554" width="1200" height="4" fill="url(#bar)" opacity="0.6"/>
+
+  <!-- Pill badge -->
+  <rect x="60" y="574" width="16" height="16" rx="8" fill="#4ade80"/>
+  <text x="88" y="587" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="20" fill="white" font-weight="500" opacity="0.9">teamdock.ai · Your workspace, live in minutes · First 14 days free</text>
+</svg>

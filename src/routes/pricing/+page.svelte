@@ -52,7 +52,62 @@
 </script>
 
 <svelte:head>
-	<title>Pricing — Teamdock</title>
+	<title>Pricing — Teamdock | WooCommerce Operations Platform</title>
+	<meta
+		name="description"
+		content="Simple, transparent pricing for WooCommerce teams. Starter €49/mo, Growth €99/mo, Pro €199/mo. First 14 days free on any plan."
+	/>
+	<link rel="canonical" href="https://teamdock.ai/pricing" />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://teamdock.ai/pricing" />
+	<meta property="og:title" content="Pricing — Teamdock | WooCommerce Operations Platform" />
+	<meta
+		property="og:description"
+		content="Starter €49/mo · Growth €99/mo · Pro €199/mo. First 14 days free on any plan. Full isolation, GDPR compliant."
+	/>
+	<meta name="twitter:title" content="Teamdock Pricing — from €49/mo" />
+	<meta
+		name="twitter:description"
+		content="Start your WooCommerce operations workspace for €49/mo. First 14 days free."
+	/>
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		"mainEntity": [
+			{
+				"@type": "Question",
+				"name": "Is my data isolated from other customers?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "Yes — every workspace runs in its own Docker container with its own database. Your data never touches another tenant's infrastructure."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "Can I connect multiple WooCommerce stores?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "Growth and Pro plans support multiple stores. Starter is single-store."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "What happens after the 14-day trial?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "You'll be asked to enter a payment method. If you don't, your workspace is paused — your data is kept for 30 days."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "Can I change plans later?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "Yes, upgrades and downgrades take effect at the next billing cycle."
+				}
+			}
+		]
+	})}<\/script>`}
 </svelte:head>
 
 <div class="pt-28 pb-24">
@@ -60,7 +115,7 @@
 		<!-- Header -->
 		<div class="text-center mb-16">
 			<h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">Simple, transparent pricing</h1>
-			<p class="mt-4 text-xl text-gray-500">Start your 14-day free trial. No credit card required.</p>
+			<p class="mt-4 text-xl text-gray-500">Your first 14 days are free on any plan.</p>
 		</div>
 
 		<!-- Plans -->

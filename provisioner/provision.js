@@ -292,12 +292,16 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     // Non-fatal: a WP-CLI failure is logged but must not block the welcome email.
     const wpVol     = `${slug}_wp_data`;
     const wpNetwork = `${slug}_internal`;
-    // Run as root — the wordpress:cli entrypoint automatically su's to www-data,
-    // which is more reliable than -u www-data (avoids HOME/cache dir permission issues).
+    // Run as uid 33 (Debian www-data) — the wordpress:latest image creates all files
+    // owned by uid 33. The wordpress:cli image is Alpine where www-data is uid 82, so
+    // running as root and letting the entrypoint su-exec to www-data results in uid 82
+    // hitting the volume as "other" (no write). Explicitly passing --user 33 bypasses
+    // the su-exec and matches the file ownership on the shared volume.
     // Newer WordPress images use getenv_docker() in wp-config.php instead of hardcoded
     // values, so credentials must be passed as env vars — not just present in wp-config.
     const wpCli = (wpArgs) => [
       'run', '--rm',
+      '--user', '33',
       '--network', wpNetwork,
       '-v', `${wpVol}:/var/www/html`,
       '-e', `WORDPRESS_DB_NAME=${wpDbName}`,

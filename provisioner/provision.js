@@ -2,8 +2,8 @@ const fs   = require('fs');
 const path = require('path');
 const { execSync, execFileSync } = require('child_process');
 const mysql = require('mysql2');
-const { randomString, randomPassword, hashToken } = require('./utils');
-const { sendWelcomeEmail } = require('./email');
+const { randomString, randomPassword, hashToken, encryptSetting } = require('./utils');
+const { sendWelcomeEmailSetup, sendWelcomeEmailReady } = require('./email');
 
 const TENANTS_DIR  = process.env.TENANTS_DIR  || '/opt/teamdock/tenants';
 const NGINX_DIR    = process.env.NGINX_DIR     || '/etc/nginx/sites-available';
@@ -409,20 +409,95 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       }
     }
 
-    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}, wc=${wcInstalled}`);
+    // Step E: generate WooCommerce REST API keys and pre-configure the tenant app.
+    // Uses wp eval-file via the shared volume so no shell quoting issues.
+    let wcApiKey    = null;
+    let wcApiSecret = null;
+    if (wcInstalled) {
+      try {
+        console.log('  [provision] generating WooCommerce API keys...');
+        const keygenScript = [
+          `<?php`,
+          `$ck = 'ck_' . wc_rand_hash();`,
+          `$cs = 'cs_' . wc_rand_hash();`,
+          `global $wpdb;`,
+          `$ok = $wpdb->insert($wpdb->prefix . 'woocommerce_api_keys', array(`,
+          `  'user_id'         => 1,`,
+          `  'description'     => 'Teamdock',`,
+          `  'permissions'     => 'read_write',`,
+          `  'consumer_key'    => wc_api_hash($ck),`,
+          `  'consumer_secret' => $cs,`,
+          `  'truncated_key'   => substr($ck, -7),`,
+          `));`,
+          `if ($ok) { echo $ck . "\\n" . $cs . "\\n"; }`,
+          `else { fwrite(STDERR, $wpdb->last_error . "\\n"); exit(1); }`,
+        ].join('\n');
+
+        // Write to the shared wp volume via the running container, then eval-file
+        const tmpLocal = `/tmp/wc-keygen-${slug}.php`;
+        fs.writeFileSync(tmpLocal, keygenScript);
+        execSync(`docker cp ${tmpLocal} ${wpContainer}:/var/www/html/wc-keygen.php`);
+        try { fs.unlinkSync(tmpLocal); } catch {}
+
+        const out = execFileSync('docker', wpCli(['eval-file', '/var/www/html/wc-keygen.php']), { encoding: 'utf8' });
+        try { execFileSync('docker', ['exec', wpContainer, 'rm', '-f', '/var/www/html/wc-keygen.php']); } catch {}
+
+        const [ck, cs] = out.trim().split('\n');
+        if (ck?.startsWith('ck_') && cs?.startsWith('cs_')) {
+          wcApiKey    = ck.trim();
+          wcApiSecret = cs.trim();
+          console.log(`  [provision] WC API keys generated (${ck.slice(0, 10)}...)`);
+        } else {
+          throw new Error(`unexpected keygen output: ${out.trim().slice(0, 120)}`);
+        }
+      } catch (err) {
+        console.error(`  [provision] ERROR generating WC API keys: ${err.message}`);
+      }
+    }
+
+    // Step F: if we have keys, encrypt and pre-seed into the tenant app — skip setup wizard.
+    if (wcApiKey && wcApiSecret) {
+      try {
+        const config = JSON.stringify({
+          wc_url:             wpUrl,
+          wc_consumer_key:    encryptSetting(wcApiKey,    sessionEncryptionKey),
+          wc_consumer_secret: encryptSetting(wcApiSecret, sessionEncryptionKey),
+        });
+        const autoSql = `UPDATE settings SET config=${mysql.escape(config)}, setup_complete=1, magic_token=NULL, magic_token_exp=NULL WHERE id=1;`;
+        runSql(dbContainer, dbName, autoSql);
+        console.log('  [provision] app pre-configured — setup wizard bypassed');
+      } catch (err) {
+        console.error(`  [provision] ERROR pre-configuring app: ${err.message}`);
+        // Leave setup_complete=0 so the wizard fallback still works
+        wcApiKey = null;
+      }
+    }
+
+    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}, wc=${wcInstalled}, autoConfigured=${!!wcApiKey}`);
   }
 
-  // 6. Send welcome email — the raw token goes in the URL, not the hash.
-  // Always include WP credentials when WordPress was provisioned: credentials are
-  // generated before the WP-CLI block runs, so they're valid even if auto-install
-  // failed and the tenant needs to use them for the manual install wizard.
-  await sendWelcomeEmail({
-    email,
-    slug,
-    domain: DOMAIN,
-    setupToken,
-    ...(wordpress && wpPort && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass, wpInstalled, wcInstalled }),
-  });
+  // 6. Send welcome email.
+  // WP package with full auto-config → direct login email (no wizard link).
+  // Everything else (BYO WooCommerce, or WP where auto-config failed) → setup wizard email.
+  const wpFullyReady = !!(wordpress && wpPort && wcApiKey);
+  if (wpFullyReady) {
+    await sendWelcomeEmailReady({
+      email,
+      slug,
+      domain:      DOMAIN,
+      wpAdminUrl:  `${wpUrl}/wp-admin`,
+      wpAdminUser,
+      wpAdminPass,
+    });
+  } else {
+    await sendWelcomeEmailSetup({
+      email,
+      slug,
+      domain:     DOMAIN,
+      setupToken,
+      ...(wordpress && wpPort && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass, wpInstalled, wcInstalled }),
+    });
+  }
 
   return { port };
 }

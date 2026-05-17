@@ -243,10 +243,11 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   console.log(`  [provision] magic token seeded (seeded=${seeded})`);
 
   // 5. Provision WordPress if requested
-  let wpInstalled = false;
-  let wcInstalled = false;
-  let wcApiKey    = null;
-  let wcApiSecret = null;
+  let wpInstalled   = false;
+  let wcInstalled   = false;
+  let wcApiKey      = null;
+  let wcApiSecret   = null;
+  let wpAppPassword = null;
   if (wordpress && wpPort) {
     const wpDbName = `wp_${slug.replace(/-/g, '_')}`;
     const wpDbUser = wpDbName;
@@ -363,7 +364,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         // /wp-json/... — nginx strips the /wp/ prefix before forwarding to Apache,
         // but WordPress needs to see its own site path prefix to route the REST API.
         `if (strpos($c, 'REQUEST_URI') === false) {`,
-        `  $fix = "if(substr(\\$_SERVER['REQUEST_URI'],0,4)!=='/wp/'){\\$_SERVER['REQUEST_URI']='/wp'.\\$_SERVER['REQUEST_URI'];}" . PHP_EOL;`,
+        `  $fix = "if(php_sapi_name()!=='cli'&&isset(\\$_SERVER['REQUEST_URI'])&&substr(\\$_SERVER['REQUEST_URI'],0,4)!=='/wp/'){\\$_SERVER['REQUEST_URI']='/wp'.\\$_SERVER['REQUEST_URI'];}" . PHP_EOL;`,
         `  $c = str_replace("/* That's all", $fix . "/* That's all", $c);`,
         `}`,
         `file_put_contents($f, $c);`,
@@ -490,7 +491,6 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     // Step F: generate a WordPress Application Password for Teamdock login.
     // Regular WP admin passwords are not accepted — the app authenticates via
     // the WP REST API which requires an Application Password.
-    let wpAppPassword = null;
     if (wcApiKey && wcApiSecret) {
       try {
         console.log('  [provision] generating WordPress Application Password...');

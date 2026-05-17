@@ -111,6 +111,9 @@ async function provisionTenant({ slug, plan, email }) {
     `SMTP_PASS=${process.env.SMTP_PASS || ''}`,
     `SMTP_FROM=${process.env.SMTP_FROM || ''}`,
     `PUBLIC_BASE_URL=https://${slug}.${DOMAIN}`,
+    // Invoice Ninja shared instance — same for all tenants
+    `INVOICENINJA_URL=${process.env.INVOICENINJA_URL || ''}`,
+    `INVOICENINJA_ADMIN_TOKEN=${process.env.INVOICENINJA_ADMIN_TOKEN || ''}`,
   ].join('\n') + '\n';
 
   fs.writeFileSync(path.join(tenantDir, '.env.secrets'), secrets, { mode: 0o600 });

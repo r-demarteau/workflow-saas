@@ -1,6 +1,6 @@
 const fs   = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const mysql = require('mysql2');
 const { randomString, randomPassword, hashToken } = require('./utils');
 const { sendWelcomeEmail } = require('./email');
@@ -78,6 +78,8 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
   const setupTokenHash       = hashToken(setupToken);      // stored in DB
   const setupTokenExp        = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
   const wpUrl                = wordpress ? `https://${slug}.${DOMAIN}/wp` : null;
+  const wpAdminUser          = wordpress ? 'admin' : null;
+  const wpAdminPass          = wordpress ? randomPassword(20) : null;
 
   // 1. Create tenant directory
   fs.mkdirSync(tenantDir, { recursive: true });
@@ -244,10 +246,13 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     ].join(' ');
     runSql(dbContainer, 'mysql', createWpDb);
 
-    // Write WordPress secrets
+    // Write WordPress secrets (DB creds + generated admin account)
     const wpSecrets = [
       `WORDPRESS_DB_PASSWORD=${wpDbPass}`,
       `WORDPRESS_TABLE_PREFIX=wp_`,
+      `WP_ADMIN_USER=${wpAdminUser}`,
+      `WP_ADMIN_PASS=${wpAdminPass}`,
+      `WP_ADMIN_URL=${wpUrl}/wp-admin`,
     ].join('\n') + '\n';
     fs.writeFileSync(path.join(tenantDir, '.env.wp.secrets'), wpSecrets, { mode: 0o600 });
 
@@ -266,11 +271,64 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     // Start WordPress container (nginx /wp/ location already written above)
     run('docker compose -f docker-compose-wp.yml up -d', tenantDir);
 
+    // Auto-install WordPress headlessly so the install wizard is never exposed.
+    // Uses the official wordpress:cli image sharing the same named volume.
+    // execFileSync avoids shell interpretation — passwords are passed as discrete args.
+    const wpVol     = `${slug}_wp_data`;
+    const wpNetwork = `${slug}_internal`;
+    const wpCliArgs = (wpArgs) => [
+      'run', '--rm', '-u', 'www-data',
+      '--network', wpNetwork,
+      '-v', `${wpVol}:/var/www/html`,
+      'wordpress:cli',
+      ...wpArgs,
+    ];
+
+    // Wait for wp-config.php to appear (WordPress entrypoint generates it on first start)
+    console.log('  [provision] waiting for WordPress to initialize...');
+    for (let attempt = 1; attempt <= 60; attempt++) {
+      try {
+        execFileSync('docker', wpCliArgs(['wp', 'config', 'path']), { stdio: 'ignore' });
+        console.log('  [provision] WordPress config ready');
+        break;
+      } catch {
+        if (attempt === 60) throw new Error(`WordPress never initialized for tenant ${slug}`);
+        execSync('sleep 3');
+      }
+    }
+
+    // Run headless core install — retries handle the brief window while the DB initializes
+    console.log('  [provision] installing WordPress core...');
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      try {
+        execFileSync('docker', wpCliArgs([
+          'wp', 'core', 'install',
+          `--url=${wpUrl}`,
+          `--title=${slug} WooCommerce Store`,
+          `--admin_user=${wpAdminUser}`,
+          `--admin_password=${wpAdminPass}`,
+          `--admin_email=${email}`,
+          '--skip-email',
+        ]), { stdio: 'inherit' });
+        console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
+        break;
+      } catch {
+        if (attempt === 10) throw new Error(`WordPress core install failed for tenant ${slug}`);
+        execSync('sleep 5');
+      }
+    }
+
     console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort})`);
   }
 
   // 6. Send welcome email — the raw token goes in the URL, not the hash
-  await sendWelcomeEmail({ email, slug, domain: DOMAIN, setupToken });
+  await sendWelcomeEmail({
+    email,
+    slug,
+    domain: DOMAIN,
+    setupToken,
+    ...(wordpress && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass }),
+  });
 
   return { port };
 }

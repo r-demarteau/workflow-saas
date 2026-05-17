@@ -12,10 +12,38 @@ function createTransport() {
   });
 }
 
-async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
+async function sendWelcomeEmail({ email, slug, domain, setupToken, wpAdminUrl, wpAdminUser, wpAdminPass }) {
   const transporter = createTransport();
   const workspaceUrl = `https://${slug}.${domain}`;
   const setupUrl     = `${workspaceUrl}/auth/magic?token=${setupToken}`;
+  const hasWp        = !!(wpAdminUrl && wpAdminUser && wpAdminPass);
+
+  const wpCredentialsHtml = hasWp ? `
+      <div class="info-box" style="margin-top:24px;border-color:#bbd0ff;background:#f0f4ff;">
+        <p style="margin:0 0 12px;font-size:12px;font-weight:600;color:#2438ec;text-transform:uppercase;letter-spacing:.05em;">🌐 Your WordPress site</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#374151;">Your WordPress site is ready and installed. Log in to your WordPress admin to install WooCommerce and generate REST API keys:</p>
+        <a href="${wpAdminUrl}" style="color:#2438ec;font-weight:600;word-break:break-all;">${wpAdminUrl}</a>
+        <table style="margin-top:14px;border-collapse:collapse;width:100%;">
+          <tr><td style="font-size:12px;font-weight:700;color:#6b7280;padding:4px 0;width:120px;">Username</td><td style="font-size:14px;color:#111827;font-family:monospace;">${wpAdminUser}</td></tr>
+          <tr><td style="font-size:12px;font-weight:700;color:#6b7280;padding:4px 0;">Password</td><td style="font-size:14px;color:#111827;font-family:monospace;">${wpAdminPass}</td></tr>
+        </table>
+        <p style="margin:12px 0 0;font-size:12px;color:#6b7280;">⚠️ Change this password after your first login.</p>
+      </div>` : '';
+
+  const wpCredentialsText = hasWp ? `\n\nYour WordPress site:\n${wpAdminUrl}\nUsername: ${wpAdminUser}\nPassword: ${wpAdminPass}\n(Change this password after first login)\n` : '';
+
+  const nextStepsHtml = hasWp
+    ? `<ol style="color:#6b7280;font-size:14px;line-height:1.8;margin:0;padding-left:18px;">
+          <li>Log in to WordPress admin and install WooCommerce</li>
+          <li>Generate WooCommerce REST API keys</li>
+          <li>Connect your store via the activation link above</li>
+          <li>Done — your dashboard is ready</li>
+        </ol>`
+    : `<ol style="color:#6b7280;font-size:14px;line-height:1.8;margin:0;padding-left:18px;">
+          <li>Connect your WooCommerce store with REST API keys</li>
+          <li>Set up your WordPress Application Password for login</li>
+          <li>Done — your dashboard is ready</li>
+        </ol>`;
 
   await transporter.sendMail({
     from:    `"Teamdock" <${process.env.SMTP_FROM || 'noreply@teamdock.ai'}>`,
@@ -60,13 +88,11 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
         <a href="${setupUrl}">${setupUrl}</a>
       </div>
 
+      ${wpCredentialsHtml}
+
       <div class="info-box">
         <p style="margin:0 0 12px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">What happens next</p>
-        <ol style="color:#6b7280;font-size:14px;line-height:1.8;margin:0;padding-left:18px;">
-          <li>Connect your WooCommerce store with REST API keys</li>
-          <li>Set up your WordPress Application Password for login</li>
-          <li>Done — your dashboard is ready</li>
-        </ol>
+        ${nextStepsHtml}
       </div>
 
       <p class="expiry">⏰ This activation link is valid for 14 days. If it expires, visit your workspace and click "Resend activation link".</p>
@@ -84,7 +110,7 @@ async function sendWelcomeEmail({ email, slug, domain, setupToken }) {
 </body>
 </html>
     `,
-    text: `Your Teamdock workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}\n\nWhat happens next:\n1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!\n\nBookmark your login page: ${workspaceUrl}/login`
+    text: `Your Teamdock workspace is ready!\n\nActivate it here (valid 14 days):\n${setupUrl}${wpCredentialsText}\nWhat happens next:\n${hasWp ? '1. Log in to WordPress admin and install WooCommerce\n2. Generate WooCommerce REST API keys\n3. Connect your store via the activation link\n4. Done!' : '1. Connect your WooCommerce store\n2. Set up your WordPress Application Password\n3. Done!'}\n\nBookmark your login page: ${workspaceUrl}/login`
   });
 
   console.log(`[email] Welcome email sent to ${email}`);

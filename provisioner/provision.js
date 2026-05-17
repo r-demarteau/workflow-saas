@@ -297,45 +297,48 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       ...wpArgs,
     ];
 
-    // Step A: wait for WordPress files
+    // Step A+B: wait for the WordPress container's entrypoint to generate wp-config.php,
+    // then patch it via docker exec (root) to fix DB_HOST and add cookie-path defines.
+    //
+    // Why docker exec instead of wp config create:
+    //   - The WordPress entrypoint creates wp-config.php owned by root.
+    //   - WP-CLI running as www-data (separate container) gets EACCES trying to overwrite it.
+    //   - docker exec runs as root by default → can patch root-owned files without issue.
+    //
+    // Why patch instead of trusting WORDPRESS_DB_HOST env var:
+    //   - Despite WORDPRESS_DB_HOST being set in docker-compose, the entrypoint consistently
+    //     writes DB_HOST='mysql' (the hardcoded default) — likely a race in env application.
+    //   - Patching after the fact is robust regardless of the root cause.
+    const wpContainer = `${slug}-wp-1`;
     try {
-      console.log('  [provision] waiting for WordPress files to land on volume...');
+      console.log('  [provision] waiting for wp-config.php...');
       for (let attempt = 1; attempt <= 60; attempt++) {
         try {
-          execFileSync('docker', [
-            'run', '--rm',
-            '--entrypoint', 'ls',
-            '-v', `${wpVol}:/var/www/html`,
-            'wordpress:cli',
-            '/var/www/html/wp-includes/version.php',
-          ], { stdio: 'ignore' });
-          console.log('  [provision] WordPress files ready');
+          execFileSync('docker', ['exec', wpContainer, 'test', '-f', '/var/www/html/wp-config.php'], { stdio: 'ignore' });
+          console.log('  [provision] wp-config.php ready');
           break;
         } catch {
-          if (attempt === 60) throw new Error('WordPress files never landed on volume');
+          if (attempt === 60) throw new Error('wp-config.php never appeared');
           execSync('sleep 3');
         }
       }
+      // Fix DB_HOST (replaces 'mysql' default with the actual container name)
+      execFileSync('docker', [
+        'exec', wpContainer,
+        'sed', '-i',
+        `s/define( 'DB_HOST', 'mysql' )/define( 'DB_HOST', '${slug}-db-1' )/`,
+        '/var/www/html/wp-config.php',
+      ], { stdio: 'inherit' });
+      // COOKIEPATH defines — prevents admin logout loop caused by /wp/ scoped cookies.
+      // Append before the "stop editing" comment so WP picks them up on every request.
+      execFileSync('docker', [
+        'exec', wpContainer,
+        'bash', '-c',
+        `grep -q COOKIEPATH /var/www/html/wp-config.php || sed -i "/That's all, stop editing/i define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');" /var/www/html/wp-config.php`,
+      ], { stdio: 'inherit' });
+      console.log('  [provision] wp-config.php patched');
     } catch (err) {
-      console.error(`  [provision] ERROR waiting for WP files: ${err.message}`);
-    }
-
-    // Step B: write correct wp-config.php
-    try {
-      console.log('  [provision] writing correct wp-config.php...');
-      execFileSync('docker', wpCli([
-        'config', 'create',
-        '--force',
-        '--skip-check',
-        `--dbname=${wpDbName}`,
-        `--dbuser=${wpDbUser}`,
-        `--dbpass=${wpDbPass}`,
-        `--dbhost=${slug}-db-1`,
-        `--extra-php=define('WP_HOME','${wpUrl}');define('WP_SITEURL','${wpUrl}');define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');`,
-      ]), { stdio: 'inherit' });
-      console.log('  [provision] wp-config.php written');
-    } catch (err) {
-      console.error(`  [provision] ERROR writing wp-config.php: ${err.message}`);
+      console.error(`  [provision] ERROR patching wp-config.php: ${err.message}`);
     }
 
     // Step C: wp core install (retries until MariaDB is ready)

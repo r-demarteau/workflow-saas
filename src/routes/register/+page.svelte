@@ -11,10 +11,12 @@
 	let plan = $derived($page.url.searchParams.get('plan') ?? 'growth');
 	let planInfo = $derived(planLabels[plan] ?? planLabels.growth);
 
-	let companyName = $state('');
-	let email       = $state('');
-	let loading     = $state(false);
-	let error       = $state('');
+	let companyName  = $state('');
+	let email        = $state('');
+	let loading      = $state(false);
+	let error        = $state('');
+	let slugChecking = $state(false);
+	let slugAvailable: boolean | null = $state(null);
 
 	// Derive subdomain slug from company name
 	let slug = $derived(
@@ -26,12 +28,35 @@
 			.slice(0, 32)
 	);
 
+	let checkTimer: ReturnType<typeof setTimeout>;
+	$effect(() => {
+		slugAvailable = null;
+		clearTimeout(checkTimer);
+		if (!slug || slug.length < 2) return;
+		slugChecking = true;
+		checkTimer = setTimeout(async () => {
+			try {
+				const res = await fetch(`/api/check-slug?slug=${encodeURIComponent(slug)}`);
+				const data = await res.json();
+				slugAvailable = data.available ?? null;
+			} catch {
+				slugAvailable = null;
+			} finally {
+				slugChecking = false;
+			}
+		}, 400);
+	});
+
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		error = '';
 
 		if (!slug || slug.length < 2) {
 			error = 'Company name must be at least 2 characters.';
+			return;
+		}
+		if (slugAvailable === false) {
+			error = `${slug}.teamdock.ai is already taken. Please choose a different name.`;
 			return;
 		}
 		if (!email.includes('@')) {
@@ -103,12 +128,32 @@
 					/>
 					<!-- Subdomain preview -->
 					{#if slug}
-						<div class="mt-2 flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
-							<svg class="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-							</svg>
-							<span class="text-sm">
-								Your workspace: <strong class="text-brand-700">{slug}.teamdock.ai</strong>
+						<div class="mt-2 flex items-center gap-2 rounded-lg px-3 py-2 border
+							{slugAvailable === false ? 'bg-red-50 border-red-200' : slugAvailable === true ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}">
+							{#if slugChecking}
+								<svg class="animate-spin h-4 w-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+								</svg>
+							{:else if slugAvailable === true}
+								<svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								</svg>
+							{:else if slugAvailable === false}
+								<svg class="h-4 w-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							{:else}
+								<svg class="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+								</svg>
+							{/if}
+							<span class="text-sm {slugAvailable === false ? 'text-red-700' : slugAvailable === true ? 'text-green-700' : 'text-gray-700'}">
+								{#if slugAvailable === false}
+									<strong>{slug}.teamdock.ai</strong> is already taken
+								{:else}
+									Your workspace: <strong class={slugAvailable === true ? 'text-green-700' : 'text-brand-700'}>{slug}.teamdock.ai</strong>
+								{/if}
 							</span>
 						</div>
 					{/if}
@@ -153,7 +198,7 @@
 
 				<button
 					type="submit"
-					disabled={loading}
+					disabled={loading || slugAvailable === false || slugChecking}
 					class="btn-primary w-full py-3.5 text-base disabled:opacity-60 disabled:cursor-not-allowed"
 				>
 					{#if loading}

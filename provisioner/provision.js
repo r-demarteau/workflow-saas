@@ -194,8 +194,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       runSql(dbContainer, 'mysql', fixAuthSql);
       console.log('  [provision] DB user auth fixed');
       break;
-    } catch {
-      if (attempt === 60) throw new Error(`DB never became ready for auth fix: ${slug}`);
+    } catch (err) {
+      if (attempt === 60) throw new Error(`DB never became ready for auth fix: ${slug}: ${err.message}`);
+      if (attempt === 1 || attempt % 10 === 0) console.log(`  [provision] waiting for DB (attempt ${attempt}/60): ${err.message}`);
       execSync('sleep 3');
     }
   }
@@ -231,8 +232,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
       runSql(dbContainer, dbName, sql);
       seeded = true;
       break;
-    } catch {
-      if (attempt === 90) throw new Error(`DB/migrations never became ready for tenant ${slug}`);
+    } catch (err) {
+      if (attempt === 90) throw new Error(`DB/migrations never became ready for tenant ${slug}: ${err.message}`);
+      if (attempt === 1 || attempt % 10 === 0) console.log(`  [provision] waiting for migrations (attempt ${attempt}/90): ${err.message}`);
       execSync('sleep 3');
     }
   }
@@ -321,26 +323,33 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           execFileSync('docker', ['exec', wpContainer, 'test', '-f', '/var/www/html/wp-config.php'], { stdio: 'ignore' });
           console.log('  [provision] wp-config.php ready');
           break;
-        } catch {
+        } catch (err) {
           if (attempt === 60) throw new Error('wp-config.php never appeared');
+          if (attempt === 1 || attempt % 10 === 0) console.log(`  [provision] waiting for wp-config.php (attempt ${attempt}/60): ${err.message}`);
           execSync('sleep 3');
         }
       }
-      // Use PHP (always available in wordpress:latest) to patch wp-config.php —
-      // more robust than sed because it handles any quote style (single or double)
-      // and any whitespace variation the WordPress entrypoint might produce.
-      const phpPatch = [
-        `$f='/var/www/html/wp-config.php';`,
-        `$c=file_get_contents($f);`,
-        // Fix DB_HOST regardless of quote style or spacing
-        `$c=preg_replace("/define\\s*\\([\\s'\\"]*DB_HOST[\\s'\\"]*,[\\s'\"]*[^'\"]*['\\"]/","define( 'DB_HOST', '${slug}-db-1'",$c);`,
-        // Add COOKIEPATH defines before the stop-editing comment if not present
-        `if(strpos($c,'COOKIEPATH')===false){$c=str_replace("/* That's all",\"define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');\n/* That's all\",$c);}`,
-        `file_put_contents($f,$c);`,
-        // Log the resulting DB_HOST line so we can verify in PM2 logs
-        `preg_match("/define[^;]*DB_HOST[^;]*;/",$c,$m);echo isset($m[0])?$m[0]:'DB_HOST not found';echo "\\n";`,
-      ].join('');
-      execFileSync('docker', ['exec', wpContainer, 'php', '-r', phpPatch], { stdio: 'inherit' });
+      // Write a PHP patch script to a temp file and docker cp it in.
+      // Writing to a file avoids all shell/quote escaping issues that break php -r one-liners.
+      const patchFile = `/tmp/wp-patch-${slug}.php`;
+      fs.writeFileSync(patchFile, [
+        `<?php`,
+        `$f = '/var/www/html/wp-config.php';`,
+        `$c = file_get_contents($f);`,
+        // Match define(...DB_HOST...) regardless of quote style or whitespace
+        `$c = preg_replace('/define[^)]*DB_HOST[^)]*\\)/', "define( 'DB_HOST', '${slug}-db-1' )", $c);`,
+        // Append COOKIEPATH defines before the stop-editing comment if not present
+        `if (strpos($c, 'COOKIEPATH') === false) {`,
+        `  $extra = "define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');" . PHP_EOL;`,
+        `  $c = str_replace("/* That's all", $extra . "/* That's all", $c);`,
+        `}`,
+        `file_put_contents($f, $c);`,
+        `preg_match('/define[^;]*DB_HOST[^;]*;/', $c, $m);`,
+        `echo (isset($m[0]) ? trim($m[0]) : 'DB_HOST not found') . PHP_EOL;`,
+      ].join('\n'));
+      execSync(`docker cp ${patchFile} ${wpContainer}:/tmp/patch.php`);
+      try { fs.unlinkSync(patchFile); } catch {}
+      execFileSync('docker', ['exec', wpContainer, 'php', '/tmp/patch.php'], { stdio: 'inherit' });
       console.log('  [provision] wp-config.php patched');
     } catch (err) {
       console.error(`  [provision] ERROR patching wp-config.php: ${err.message}`);
@@ -363,8 +372,9 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           wpInstalled = true;
           console.log(`  [provision] WordPress installed — admin at ${wpUrl}/wp-admin`);
           break;
-        } catch {
-          if (attempt === 30) throw new Error('wp core install failed after 30 attempts');
+        } catch (err) {
+          if (attempt === 30) throw new Error(`wp core install failed after 30 attempts: ${err.message}`);
+          if (attempt === 1 || attempt % 5 === 0) console.log(`  [provision] wp core install attempt ${attempt}/30: ${err.message}`);
           execSync('sleep 5');
         }
       }

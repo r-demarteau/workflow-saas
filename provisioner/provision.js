@@ -367,6 +367,13 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         `  $fix = "if(php_sapi_name()!=='cli'&&isset(\\$_SERVER['REQUEST_URI'])&&substr(\\$_SERVER['REQUEST_URI'],0,4)!=='/wp/'){\\$_SERVER['REQUEST_URI']='/wp'.\\$_SERVER['REQUEST_URI'];}" . PHP_EOL;`,
         `  $c = str_replace("/* That's all", $fix . "/* That's all", $c);`,
         `}`,
+        // WordPress is_ssl() checks $_SERVER['HTTPS'], not the site URL.
+        // Running behind nginx (HTTPS → HTTP), HTTPS is unset → is_ssl()=false →
+        // Application Passwords disabled. Set HTTPS='on' when the forwarded proto is https.
+        `if (strpos($c, 'HTTP_X_FORWARDED_PROTO') === false) {`,
+        `  $ssl = "if(isset(\\$_SERVER['HTTP_X_FORWARDED_PROTO'])&&\\$_SERVER['HTTP_X_FORWARDED_PROTO']==='https'){\\$_SERVER['HTTPS']='on';}" . PHP_EOL;`,
+        `  $c = str_replace("/* That's all", $ssl . "/* That's all", $c);`,
+        `}`,
         `file_put_contents($f, $c);`,
         `preg_match('/define[^;]*DB_HOST[^;]*;/', $c, $m);`,
         `echo (isset($m[0]) ? trim($m[0]) : 'DB_HOST not found') . PHP_EOL;`,

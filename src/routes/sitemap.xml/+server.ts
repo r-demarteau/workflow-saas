@@ -6,6 +6,7 @@ const pages = [
 	{ path: '/', priority: '1.0', changefreq: 'weekly' },
 	{ path: '/pricing', priority: '0.9', changefreq: 'monthly' },
 	{ path: '/blog', priority: '0.8', changefreq: 'weekly' },
+	{ path: '/blog/woocommerce-hetzner-hosting-guide', priority: '0.8', changefreq: 'monthly' },
 	{ path: '/blog/woocommerce-customer-support-guide', priority: '0.8', changefreq: 'monthly' },
 	{ path: '/privacy', priority: '0.3', changefreq: 'yearly' },
 	{ path: '/terms', priority: '0.3', changefreq: 'yearly' },

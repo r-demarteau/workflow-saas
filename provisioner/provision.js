@@ -357,6 +357,13 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
         `  $extra = "define('COOKIEPATH','/');define('SITECOOKIEPATH','/');define('ADMIN_COOKIE_PATH','/');define('PLUGINS_COOKIE_PATH','/');" . PHP_EOL;`,
         `  $c = str_replace("/* That's all", $extra . "/* That's all", $c);`,
         `}`,
+        // Prepend /wp to REQUEST_URI so WordPress sees /wp/wp-json/... instead of
+        // /wp-json/... — nginx strips the /wp/ prefix before forwarding to Apache,
+        // but WordPress needs to see its own site path prefix to route the REST API.
+        `if (strpos($c, 'REQUEST_URI') === false) {`,
+        `  $fix = "if(substr(\\$_SERVER['REQUEST_URI'],0,4)!=='/wp/'){\\$_SERVER['REQUEST_URI']='/wp'.\\$_SERVER['REQUEST_URI'];}" . PHP_EOL;`,
+        `  $c = str_replace("/* That's all", $fix . "/* That's all", $c);`,
+        `}`,
         `file_put_contents($f, $c);`,
         `preg_match('/define[^;]*DB_HOST[^;]*;/', $c, $m);`,
         `echo (isset($m[0]) ? trim($m[0]) : 'DB_HOST not found') . PHP_EOL;`,

@@ -27,7 +27,7 @@ app.use((req, res, next) => {
 
 // ── Provision ────────────────────────────────────────────────────────────────
 app.post('/provision', async (req, res) => {
-  const { slug, plan, email } = req.body ?? {};
+  const { slug, plan, email, wordpress = false } = req.body ?? {};
 
   if (!slug || !plan || !email) {
     return res.status(400).json({ error: 'Missing slug, plan or email.' });
@@ -38,10 +38,10 @@ app.post('/provision', async (req, res) => {
     return res.status(400).json({ error: 'Invalid slug.' });
   }
 
-  console.log(`[provision] Starting provisioning for ${slug} (${plan}) — ${email}`);
+  console.log(`[provision] Starting provisioning for ${slug} (${plan}) — ${email}${wordpress ? ' + WordPress' : ''}`);
 
   try {
-    const result = await provisionTenant({ slug, plan, email });
+    const result = await provisionTenant({ slug, plan, email, wordpress: Boolean(wordpress) });
     console.log(`[provision] Done: ${slug}.teamdock.ai on port ${result.port}`);
     return res.json({ ok: true, url: `https://${slug}.teamdock.ai`, port: result.port });
   } catch (err) {

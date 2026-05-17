@@ -11,6 +11,7 @@
 				'Orders, customers & tickets',
 				'Live chat',
 				'Email support',
+				'E-invoicing (Peppol)',
 				'your-brand.teamdock.ai'
 			],
 			cta: 'Start with Starter',
@@ -160,6 +161,39 @@
 					</div>
 				</div>
 			{/each}
+		</div>
+
+		<!-- WordPress add-on -->
+		<div class="mt-16 max-w-3xl mx-auto">
+			<div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+				<div class="flex flex-col md:flex-row items-start md:items-center gap-6 p-8">
+					<div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-2xl">
+						🌐
+					</div>
+					<div class="flex-1">
+						<div class="flex items-center gap-3 flex-wrap">
+							<h3 class="text-lg font-bold text-gray-900">WordPress hosting</h3>
+							<span class="rounded-full bg-gray-100 px-3 py-0.5 text-xs font-medium text-gray-600">Add-on · any plan</span>
+						</div>
+						<p class="mt-1 text-sm text-gray-500">Add a fully isolated WordPress site at <span class="font-mono text-brand-600">wp.your-brand.teamdock.ai</span>. Managed for you — no server setup needed.</p>
+						<ul class="mt-3 flex flex-wrap gap-x-6 gap-y-1">
+							{#each ['Isolated container', 'Automatic SSL', 'MariaDB included', 'Ready in minutes'] as f}
+								<li class="flex items-center gap-1.5 text-xs text-gray-500">
+									<svg class="h-3.5 w-3.5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+									</svg>
+									{f}
+								</li>
+							{/each}
+						</ul>
+					</div>
+					<div class="flex-shrink-0 text-right">
+						<div class="text-3xl font-extrabold text-gray-900">€19</div>
+						<div class="text-sm text-gray-400">/month</div>
+						<p class="mt-1 text-xs text-gray-400">Add during checkout</p>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<!-- FAQ -->

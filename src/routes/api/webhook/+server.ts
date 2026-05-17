@@ -16,11 +16,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (event.type === 'checkout.session.completed') {
 		const session  = event.data.object;
-		const { slug, plan, email } = session.metadata as Record<string, string>;
+		const { slug, plan, email, wordpress } = session.metadata as Record<string, string>;
 
 		// Fire and forget — respond to Stripe immediately so it doesn't time out
 		// while Docker/nginx setup runs (can take 30-60s).
-		provisionTenant({ slug, plan, email }).catch((err: unknown) => {
+		provisionTenant({ slug, plan, email, wordpress: wordpress === 'true' }).catch((err: unknown) => {
 			const msg = String((err as Error).message ?? err);
 			if (msg.includes('already exists')) {
 				console.log(`[webhook] Tenant ${slug} already provisioned — skipping duplicate event`);
@@ -36,11 +36,13 @@ export const POST: RequestHandler = async ({ request }) => {
 async function provisionTenant({
 	slug,
 	plan,
-	email
+	email,
+	wordpress
 }: {
 	slug: string;
 	plan: string;
 	email: string;
+	wordpress: boolean;
 }) {
 	const provisionUrl = env.PROVISION_API_URL;
 	if (!provisionUrl) {
@@ -54,7 +56,7 @@ async function provisionTenant({
 			'Content-Type': 'application/json',
 			'Authorization': `Bearer ${env.PROVISION_API_SECRET}`
 		},
-		body: JSON.stringify({ slug, plan, email })
+		body: JSON.stringify({ slug, plan, email, wordpress })
 	});
 
 	if (!res.ok) {
@@ -63,5 +65,5 @@ async function provisionTenant({
 		throw new Error(`Provisioner returned ${res.status}: ${text}`);
 	}
 
-	console.log(`[webhook] Tenant provisioned: ${slug}.teamdock.ai (${plan})`);
+	console.log(`[webhook] Tenant provisioned: ${slug}.teamdock.ai (${plan})${wordpress ? ' + WordPress' : ''}`);
 }

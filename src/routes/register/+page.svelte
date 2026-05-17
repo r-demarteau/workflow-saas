@@ -13,6 +13,7 @@
 
 	let companyName  = $state('');
 	let email        = $state('');
+	let wordpress    = $state(false);
 	let loading      = $state(false);
 	let error        = $state('');
 	let slugChecking = $state(false);
@@ -69,7 +70,7 @@
 			const res = await fetch('/api/checkout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ plan, slug, email })
+				body: JSON.stringify({ plan, slug, email, wordpress })
 			});
 
 			const data = await res.json();
@@ -107,7 +108,7 @@
 			<div class="mb-6 flex items-center justify-between">
 				<h1 class="text-2xl font-bold text-gray-900">Create your workspace</h1>
 				<span class="rounded-full bg-brand-50 border border-brand-200 px-3 py-1 text-sm font-semibold text-brand-700">
-					{planInfo.label} · {planInfo.price}
+					{planInfo.label} · {planInfo.price}{wordpress ? ' + €19 WP' : ''}
 				</span>
 			</div>
 
@@ -174,6 +175,22 @@
 					/>
 					<p class="mt-1.5 text-xs text-gray-400">We'll send your login credentials to this address.</p>
 				</div>
+
+				<!-- WordPress add-on -->
+				<label class="flex items-start gap-3 cursor-pointer rounded-xl border border-gray-200 p-4 hover:border-brand-300 hover:bg-brand-50 transition {wordpress ? 'border-brand-400 bg-brand-50' : ''}">
+					<input
+						type="checkbox"
+						bind:checked={wordpress}
+						class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 flex-shrink-0"
+					/>
+					<div class="flex-1 min-w-0">
+						<div class="flex items-center justify-between gap-2 flex-wrap">
+							<span class="text-sm font-medium text-gray-900">Add WordPress hosting</span>
+							<span class="text-sm font-bold text-brand-700">+€19/mo</span>
+						</div>
+						<p class="text-xs text-gray-500 mt-0.5">Isolated WordPress site at <span class="font-mono">wp.{slug || 'your-brand'}.teamdock.ai</span></p>
+					</div>
+				</label>
 
 				<!-- Legal acceptance -->
 				<label class="flex items-start gap-3 cursor-pointer">

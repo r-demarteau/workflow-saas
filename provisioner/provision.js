@@ -58,7 +58,7 @@ function runSql(dbContainer, dbName, sql) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-async function provisionTenant({ slug, plan, email }) {
+async function provisionTenant({ slug, plan, email, wordpress = false }) {
   const tenantDir = path.join(TENANTS_DIR, slug);
 
   if (fs.existsSync(tenantDir)) {
@@ -196,7 +196,66 @@ async function provisionTenant({ slug, plan, email }) {
   }
   console.log(`  [provision] magic token seeded (seeded=${seeded})`);
 
-  // 5. Send welcome email — the raw token goes in the URL, not the hash
+  // 5. Provision WordPress if requested
+  if (wordpress) {
+    const wpPort      = nextPort();
+    const wpDbName    = `wp_${slug.replace(/-/g, '_')}`;
+    const wpDbUser    = wpDbName;
+    const wpDbPass    = randomString(24);
+
+    // Create WP DB and user in the existing MariaDB container
+    const createWpDb = [
+      `CREATE DATABASE IF NOT EXISTS \`${wpDbName}\`;`,
+      `CREATE USER IF NOT EXISTS ${mysql.escape(wpDbUser)}@'%' IDENTIFIED BY ${mysql.escape(wpDbPass)};`,
+      `GRANT ALL PRIVILEGES ON \`${wpDbName}\`.* TO ${mysql.escape(wpDbUser)}@'%';`,
+      `FLUSH PRIVILEGES;`,
+    ].join(' ');
+    runSql(dbContainer, 'mysql', createWpDb);
+
+    // Write WordPress secrets
+    const wpSecrets = [
+      `WORDPRESS_DB_PASSWORD=${wpDbPass}`,
+      `WORDPRESS_TABLE_PREFIX=wp_`,
+    ].join('\n') + '\n';
+    fs.writeFileSync(path.join(tenantDir, '.env.wp.secrets'), wpSecrets, { mode: 0o600 });
+
+    // Write WordPress docker-compose
+    const wpComposeTemplate = fs.readFileSync(
+      path.join(__dirname, 'templates', 'docker-compose-wp.template.yml'), 'utf8'
+    );
+    const wpCompose = wpComposeTemplate
+      .replace(/\{\{SLUG\}\}/g,       slug)
+      .replace(/\{\{WP_PORT\}\}/g,    String(wpPort))
+      .replace(/\{\{WP_DB_NAME\}\}/g, wpDbName)
+      .replace(/\{\{WP_DB_USER\}\}/g, wpDbUser);
+    fs.writeFileSync(path.join(tenantDir, 'docker-compose-wp.yml'), wpCompose);
+
+    // Start WordPress container
+    run('docker compose -f docker-compose-wp.yml up -d', tenantDir);
+
+    // Write WordPress nginx vhost
+    const wpNginxTemplate = fs.readFileSync(
+      path.join(__dirname, 'templates', 'nginx-wp.template.conf'), 'utf8'
+    );
+    const wpNginxConf = wpNginxTemplate
+      .replace(/\{\{SLUG\}\}/g,      slug)
+      .replace(/\{\{DOMAIN\}\}/g,    DOMAIN)
+      .replace(/\{\{CERT_NAME\}\}/g, CERT_NAME)
+      .replace(/\{\{WP_PORT\}\}/g,   String(wpPort));
+
+    const wpNginxFile = path.join(NGINX_DIR, `wp.${slug}.${DOMAIN}.conf`);
+    fs.writeFileSync(wpNginxFile, wpNginxConf);
+
+    const wpEnabledPath = `/etc/nginx/sites-enabled/wp.${slug}.${DOMAIN}.conf`;
+    if (!fs.existsSync(wpEnabledPath)) {
+      run(`ln -s ${wpNginxFile} ${wpEnabledPath}`, '/');
+    }
+    run('nginx -s reload', '/');
+
+    console.log(`  [provision] WordPress live at wp.${slug}.${DOMAIN} (port ${wpPort})`);
+  }
+
+  // 6. Send welcome email — the raw token goes in the URL, not the hash
   await sendWelcomeEmail({ email, slug, domain: DOMAIN, setupToken });
 
   return { port };

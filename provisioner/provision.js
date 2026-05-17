@@ -233,6 +233,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
 
   // 5. Provision WordPress if requested
   let wpInstalled = false;
+  let wcInstalled = false;
   if (wordpress && wpPort) {
     const wpDbName = `wp_${slug.replace(/-/g, '_')}`;
     const wpDbUser = wpDbName;
@@ -345,12 +346,20 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
           execSync('sleep 5');
         }
       }
+
+      // Install and activate WooCommerce, then create shop pages.
+      // Non-fatal: a failure here is logged but won't block the welcome email.
+      console.log('  [provision] installing WooCommerce...');
+      execFileSync('docker', wpCliArgs(['wp', 'plugin', 'install', 'woocommerce', '--activate']), { stdio: 'inherit' });
+      execFileSync('docker', wpCliArgs(['wp', 'wc', 'tool', 'run', 'install_pages', `--user=${wpAdminUser}`]), { stdio: 'inherit' });
+      wcInstalled = true;
+      console.log('  [provision] WooCommerce installed and shop pages created');
     } catch (err) {
       console.error(`  [provision] WARNING: WordPress auto-install failed for ${slug}: ${err.message}`);
       console.error('  [provision] The install wizard will be accessible — tenant must install manually.');
     }
 
-    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}`);
+    console.log(`  [provision] WordPress live at ${wpUrl} (port ${wpPort}), installed=${wpInstalled}, wc=${wcInstalled}`);
   }
 
   // 6. Send welcome email — the raw token goes in the URL, not the hash.
@@ -362,7 +371,7 @@ async function provisionTenant({ slug, plan, email, wordpress = false }) {
     slug,
     domain: DOMAIN,
     setupToken,
-    ...(wordpress && wpPort && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass, wpInstalled }),
+    ...(wordpress && wpPort && { wpAdminUrl: `${wpUrl}/wp-admin`, wpAdminUser, wpAdminPass, wpInstalled, wcInstalled }),
   });
 
   return { port };

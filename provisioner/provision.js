@@ -5,13 +5,13 @@ const mysql = require('mysql2');
 const { randomString, randomPassword, hashToken } = require('./utils');
 const { sendWelcomeEmail } = require('./email');
 
-const TENANTS_DIR  = process.env.TENANTS_DIR  || '/opt/nemofirm/tenants';
+const TENANTS_DIR  = process.env.TENANTS_DIR  || '/opt/teamdock/tenants';
 const NGINX_DIR    = process.env.NGINX_DIR     || '/etc/nginx/sites-available';
 const PORT_FILE    = path.join(TENANTS_DIR, '.port-counter');
 const PORT_START   = 3100;
-const DOMAIN       = process.env.DOMAIN        || 'nemofirm.com';
+const DOMAIN       = process.env.DOMAIN        || 'teamdock.ai';
 const CERT_NAME    = process.env.CERT_NAME      || DOMAIN;
-const APP_IMAGE    = process.env.APP_IMAGE      || 'ghcr.io/nemofirm/woo-client:latest';
+const APP_IMAGE    = process.env.APP_IMAGE      || 'ghcr.io/teamdock/woo-client:latest';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

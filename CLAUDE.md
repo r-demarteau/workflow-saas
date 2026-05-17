@@ -1,19 +1,19 @@
 # workflow-saas
 
-The **SaaS billing and provisioning layer** for NemoFirm. This is the
+The **SaaS billing and provisioning layer** for Teamdock. This is the
 public-facing marketing site and Stripe checkout that, on successful payment,
 automatically provisions a new isolated tenant workspace running `woo_client_codex`.
 
 ## How it all fits together
 
 ```
-User visits nemofirm.com (this repo — workflow-saas)
+User visits teamdock.ai (this repo — workflow-saas)
   └─▶ picks plan → /register → Stripe Checkout
         └─▶ checkout.session.completed webhook
               └─▶ /api/webhook → calls provisioner HTTP API
                     └─▶ provisioner/server.js (runs on Hetzner at 127.0.0.1:3050)
                           └─▶ docker compose up  (woo_client_codex image)
-                                └─▶ {slug}.nemofirm.com goes live
+                                └─▶ {slug}.teamdock.ai goes live
 ```
 
 ## Tech Stack
@@ -49,9 +49,9 @@ provisioner/
     docker-compose.template.yml  per-tenant Compose file
     nginx.template.conf          per-tenant nginx vhost
 deploy/
-  01-wildcard-ssl.sh      set up *.nemofirm.com wildcard cert
+  01-wildcard-ssl.sh      set up *.teamdock.ai wildcard cert
   02-deploy.sh            deploy script
-  nginx-nemofirm.conf     top-level nginx config
+  nginx-teamdock.conf     top-level nginx config
 ```
 
 ## Signup → Provision Flow
@@ -66,18 +66,18 @@ deploy/
    { slug, plan, email }
    ```
 5. **provisioner/provision.js**:
-   - Creates `/opt/nemofirm/tenants/{slug}/`
+   - Creates `/opt/teamdock/tenants/{slug}/`
    - Assigns next available port (starting at 3100, atomic file lock)
    - Generates all secrets (`AUTH_SECRET`, `SESSION_ENCRYPTION_KEY`, DB passwords, etc.)
    - Writes `docker-compose.yml` + `.env.secrets` (mode 0600)
-   - `docker compose up -d` (uses `ghcr.io/nemofirm/woo-client:latest`)
+   - `docker compose up -d` (uses `ghcr.io/teamdock/woo-client:latest`)
    - Waits for MariaDB healthcheck (up to 60 s), seeds `magic_token` into `settings` table
-   - Writes nginx vhost to `/etc/nginx/sites-available/{slug}.nemofirm.com.conf`
+   - Writes nginx vhost to `/etc/nginx/sites-available/{slug}.teamdock.ai.conf`
    - Symlinks to `sites-enabled/`, reloads nginx
    - Sends welcome email with setup link
-6. Tenant is live at `https://{slug}.nemofirm.com`.
+6. Tenant is live at `https://{slug}.teamdock.ai`.
 
-Wildcard SSL (`*.nemofirm.com`) is obtained once (01-wildcard-ssl.sh) and
+Wildcard SSL (`*.teamdock.ai`) is obtained once (01-wildcard-ssl.sh) and
 covers all new tenants automatically — no per-tenant certbot needed.
 
 ## Plans
@@ -109,9 +109,9 @@ covers all new tenants automatically — no per-tenant certbot needed.
 |------------------------|----------------------------------------------|
 | `PROVISION_API_SECRET` | Must match the SvelteKit app's value         |
 | `PROVISIONER_PORT`     | Port for provisioner HTTP server (default 3050) |
-| `TENANTS_DIR`          | Where tenant dirs are created (default `/opt/nemofirm/tenants`) |
+| `TENANTS_DIR`          | Where tenant dirs are created (default `/opt/teamdock/tenants`) |
 | `NGINX_DIR`            | nginx sites-available dir                    |
-| `DOMAIN`               | Tenant domain (default `nemofirm.com`)       |
+| `DOMAIN`               | Tenant domain (default `teamdock.ai`)        |
 | `APP_IMAGE`            | Docker image to pull for each tenant         |
 | `SMTP_*`               | Email credentials for welcome emails         |
 
@@ -153,7 +153,7 @@ Hetzner host, not in a container).
 ### Directory layout
 
 ```
-/opt/nemofirm/
+/opt/teamdock/
   app-src/           ← woo_client_codex git clone (the TENANT app)
   frontend-src/      ← workflow-saas git clone (THIS repo — provisioner lives here)
     provisioner/
@@ -174,21 +174,21 @@ Hetzner host, not in a container).
 
 | Path | Git remote | Purpose |
 |------|-----------|---------|
-| `/opt/nemofirm/app-src` | `workflow` (woo_client_codex) | Source for `workflow_portal-app:latest` Docker image |
-| `/opt/nemofirm/frontend-src` | `workflow-saas` (this repo) | Provisioner process + SvelteKit marketing site |
+| `/opt/teamdock/app-src` | `workflow` (woo_client_codex) | Source for `workflow_portal-app:latest` Docker image |
+| `/opt/teamdock/frontend-src` | `workflow-saas` (this repo) | Provisioner process + SvelteKit marketing site |
 
-**Always build the tenant Docker image from `/opt/nemofirm/app-src`, never from `frontend-src`.**
+**Always build the tenant Docker image from `/opt/teamdock/app-src`, never from `frontend-src`.**
 Running `docker build` in `frontend-src` builds the marketing site and overwrites the tenant image — breaking all tenant containers.
 
 ### Updating the tenant app image
 
 ```bash
-cd /opt/nemofirm/app-src
+cd /opt/teamdock/app-src
 git pull origin main
 docker build -t workflow_portal-app:latest .
 
 # Recreate all tenant app containers (DB volumes untouched)
-for tenant in /opt/nemofirm/tenants/*/; do
+for tenant in /opt/teamdock/tenants/*/; do
   slug=$(basename "$tenant")
   [[ "$slug" == .* ]] && continue
   docker compose -f "$tenant/docker-compose.yml" up -d --no-deps --force-recreate app
@@ -198,22 +198,22 @@ done
 ### Updating the provisioner
 
 ```bash
-cd /opt/nemofirm/frontend-src
+cd /opt/teamdock/frontend-src
 git pull origin main
-pm2 restart nemofirm-provisioner --update-env
+pm2 restart teamdock-provisioner --update-env
 ```
 
 ### PM2
 
-The provisioner runs as PM2 process **`nemofirm-provisioner`** (id 0).
-Logs: `pm2 logs nemofirm-provisioner --lines 200 --nostream`
+The provisioner runs as PM2 process **`teamdock-provisioner`** (id 0).
+Logs: `pm2 logs teamdock-provisioner --lines 200 --nostream`
 
 ### SSL certificate
 
-Wildcard cert is at `/etc/letsencrypt/live/nemofirm.com-0001/` (note the `-0001` suffix —
+Wildcard cert is at `/etc/letsencrypt/live/teamdock.ai-0001/` (note the `-0001` suffix —
 certbot appended it on renewal). The provisioner `.env` must have:
 ```
-CERT_NAME=nemofirm.com-0001
+CERT_NAME=teamdock.ai-0001
 ```
 Without this the generated nginx vhosts point to the wrong cert path and all new tenants fail to serve HTTPS.
 
@@ -224,36 +224,36 @@ The provisioner reads `SMTP_*` from its own `.env` and writes them into each ten
 If a tenant was provisioned before this was in place, manually append to their `.env.secrets`:
 
 ```bash
-SMTP_HOST=$(grep ^SMTP_HOST /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
-SMTP_PORT=$(grep ^SMTP_PORT /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
-SMTP_SECURE=$(grep ^SMTP_SECURE /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
-SMTP_USER=$(grep ^SMTP_USER /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
-SMTP_PASS=$(grep ^SMTP_PASS /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
-SMTP_FROM=$(grep ^SMTP_FROM /opt/nemofirm/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_HOST=$(grep ^SMTP_HOST /opt/teamdock/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_PORT=$(grep ^SMTP_PORT /opt/teamdock/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_SECURE=$(grep ^SMTP_SECURE /opt/teamdock/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_USER=$(grep ^SMTP_USER /opt/teamdock/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_PASS=$(grep ^SMTP_PASS /opt/teamdock/frontend-src/provisioner/.env | cut -d= -f2-)
+SMTP_FROM=$(grep ^SMTP_FROM /opt/teamdock/frontend-src/provisioner/.env | cut -d= -f2-)
 
-printf "SMTP_HOST=%s\nSMTP_PORT=%s\nSMTP_SECURE=%s\nSMTP_USER=%s\nSMTP_PASS=%s\nSMTP_FROM=%s\nPUBLIC_BASE_URL=https://{slug}.nemofirm.com\n" \
+printf "SMTP_HOST=%s\nSMTP_PORT=%s\nSMTP_SECURE=%s\nSMTP_USER=%s\nSMTP_PASS=%s\nSMTP_FROM=%s\nPUBLIC_BASE_URL=https://{slug}.teamdock.ai\n" \
   "$SMTP_HOST" "$SMTP_PORT" "$SMTP_SECURE" "$SMTP_USER" "$SMTP_PASS" "$SMTP_FROM" \
-  >> /opt/nemofirm/tenants/{slug}/.env.secrets
-docker compose -f /opt/nemofirm/tenants/{slug}/docker-compose.yml up -d --no-deps app
+  >> /opt/teamdock/tenants/{slug}/.env.secrets
+docker compose -f /opt/teamdock/tenants/{slug}/docker-compose.yml up -d --no-deps app
 ```
 
 ### Nightly backups
 
-Cron: `0 2 * * * /opt/nemofirm/frontend-src/provisioner/backup.sh`
-Dumps all tenant DBs to `/opt/nemofirm/backups/YYYY-MM-DD/{slug}.sql.gz`, keeps 14 days.
+Cron: `0 2 * * * /opt/teamdock/frontend-src/provisioner/backup.sh`
+Dumps all tenant DBs to `/opt/teamdock/backups/YYYY-MM-DD/{slug}.sql.gz`, keeps 14 days.
 
 ### Manually recovering a broken tenant
 
 If provisioning failed mid-way (settings table never seeded):
-1. Check the provisioner logs: `pm2 logs nemofirm-provisioner --lines 200 --nostream`
-2. Verify migrations ran: `docker exec {slug}-db-1 mariadb -u root -p"$ROOT_PASS" nemo_{slug} -e "SHOW TABLES;"`
+1. Check the provisioner logs: `pm2 logs teamdock-provisioner --lines 200 --nostream`
+2. Verify migrations ran: `docker exec {slug}-db-1 mariadb -u root -p"$ROOT_PASS" teamdock_{slug} -e "SHOW TABLES;"`
 3. If table exists, seed manually:
    ```sql
    INSERT INTO settings (id, config, setup_complete, magic_token, magic_token_exp, admin_email)
    VALUES (1, '{}', 0, 'placeholder', 0, 'admin@example.com')
    ON DUPLICATE KEY UPDATE config=config;
    ```
-4. Trigger resend: `curl -X POST https://{slug}.nemofirm.com/api/auth/resend-magic -H "Content-Type: application/json" -d '{"email":"admin@example.com"}'`
+4. Trigger resend: `curl -X POST https://{slug}.teamdock.ai/api/auth/resend-magic -H "Content-Type: application/json" -d '{"email":"admin@example.com"}'`
 5. If nginx vhost is missing: generate from template and symlink to sites-enabled, then `nginx -s reload`.
 
 ## Important Notes
@@ -262,7 +262,7 @@ If provisioning failed mid-way (settings table never seeded):
   prevent port collisions when two tenants are provisioned simultaneously.
 - Secrets are written to `.env.secrets` with mode `0600` (not in `docker-compose.yml`).
 - `pull_policy: never` in the Compose template — the image must already be present
-  on the host; build it from `/opt/nemofirm/app-src`.
+  on the host; build it from `/opt/teamdock/app-src`.
 - The `magic_token` seeded into `settings` expires after 14 days; it's the
   admin's one-time setup credential. The provisioner waits up to 4.5 min (90×3s)
   for the `settings` table to appear (migrations run inside the app container on startup).

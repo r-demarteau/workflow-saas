@@ -1,5 +1,5 @@
 #!/bin/bash
-# ── Full production deploy for NemoFirm on Hetzner ───────────────────────────
+# ── Full production deploy for Teamdock on Hetzner ───────────────────────────
 # Run this from the server after first-time git clone.
 # Re-run any time to update the frontend or provisioner.
 #

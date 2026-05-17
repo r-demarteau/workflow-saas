@@ -1,11 +1,11 @@
 #!/bin/bash
 # Daily backup of all tenant MariaDB databases
-# Saves compressed dumps to /opt/nemofirm/backups/YYYY-MM-DD/
+# Saves compressed dumps to /opt/teamdock/backups/YYYY-MM-DD/
 
 set -euo pipefail
 
-TENANTS_DIR="${TENANTS_DIR:-/opt/nemofirm/tenants}"
-BACKUP_ROOT="/opt/nemofirm/backups"
+TENANTS_DIR="${TENANTS_DIR:-/opt/teamdock/tenants}"
+BACKUP_ROOT="/opt/teamdock/backups"
 DATE=$(date +%Y-%m-%d)
 BACKUP_DIR="$BACKUP_ROOT/$DATE"
 KEEP_DAYS=14
@@ -34,8 +34,8 @@ for tenant_dir in "$TENANTS_DIR"/*/; do
     echo "[backup] Skipping $slug — could not read MYSQL_ROOT_PASSWORD"
     continue
   fi
-  # DB name is always nemo_{slug} with hyphens replaced by underscores — same as provision.js
-  db_name="nemo_${slug//-/_}"
+  # DB name is always teamdock_{slug} with hyphens replaced by underscores — same as provision.js
+  db_name="teamdock_${slug//-/_}"
 
   # Check container is running
   container="${slug}-db-1"
